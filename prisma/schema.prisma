@@ -13,3 +13,126 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+
+enum StoreStatus{
+  TRIAL
+  ACTIVE
+  SUSPENDED
+}
+
+enum OrderStatus {
+  PENDING_PAYMENT
+  PAID
+  COD_PENDING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+  EXPIRED
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+}
+
+model User {
+  id        String   @id @default(cuid())
+  phone     String   @unique
+  email     String?  @unique
+  password  String
+  name      String
+  createdAt DateTime @default(now())
+  stores    Store[]
+}
+
+model Store {
+  id            String      @id @default(cuid())
+  slug          String      @unique
+  name          String
+  description   String?
+  logoUrl       String?
+  phone         String
+  ownerId       String
+  owner         User        @relation(fields: [ownerId], references: [id])
+  products      Product[]
+  orders        Order[]
+  status        StoreStatus @default(TRIAL)
+  trialEndsAt   DateTime    @default(now())
+  commissionBps Int         @default(300)
+  createdAt     DateTime    @default(now())
+}
+
+model Product {
+  id          String    @id @default(cuid())
+  storeId     String
+  store       Store     @relation(fields: [storeId], references: [id])
+  name        String
+  description String?
+  imageUrls   String[]
+  isPublished Boolean   @default(false)
+  variants    Variant[]
+  createdAt   DateTime  @default(now())
+
+  @@index([storeId, isPublished])
+}
+
+model Variant {
+  id         String      @id @default(cuid())
+  productId  String
+  product    Product     @relation(fields: [productId], references: [id])
+  label      String
+  priceCents Int
+  stock      Int
+  orderItems OrderItem[]
+
+  @@index([productId])
+}
+
+model Order {
+  id           String      @id @default(cuid())
+  storeId      String
+  store        Store       @relation(fields: [storeId], references: [id])
+  status       OrderStatus @default(PENDING_PAYMENT)
+  customerName String
+  phone        String
+  address      String
+  totalCents   Int
+  expiresAt    DateTime?
+  items        OrderItem[]
+  payments     Payment[]
+  createdAt    DateTime    @default(now())
+
+  @@index([storeId, status])
+  @@index([status, expiresAt])
+}
+
+model OrderItem {
+  id         String  @id @default(cuid())
+  orderId    String
+  order      Order   @relation(fields: [orderId], references: [id])
+  variantId  String
+  variant    Variant @relation(fields: [variantId], references: [id])
+  quantity   Int
+  priceCents Int
+}
+
+model Payment {
+  id          String        @id @default(cuid())
+  orderId     String
+  order       Order         @relation(fields: [orderId], references: [id])
+  txRef       String        @unique
+  amountCents Int
+  status      PaymentStatus @default(PENDING)
+  provider    String        @default("chapa")
+  createdAt   DateTime      @default(now())
+}
+
+model WebhookEvent {
+  id          String    @id @default(cuid())
+  provider    String
+  eventKey    String    @unique
+  payload     Json
+  processedAt DateTime?
+  createdAt   DateTime  @default(now())
+}
