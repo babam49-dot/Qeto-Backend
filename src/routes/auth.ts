@@ -2,6 +2,7 @@ import { Router, Request, Response } from "express";
 import { z } from "zod";
 import { prisma } from "../db.js";
 import { hashPassword, checkPassword, signToken, normalizePhone } from "../lib/auth.js";
+import { requireAuth, AuthRequest } from "../middleware/requireAuth.js";
 
 export const authRouter = Router();
 
@@ -164,3 +165,44 @@ authRouter.post("/login", async (req: Request, res: Response) => {
   }
 });
 
+/**
+ * GET /api/auth/me
+ * Returns the currently logged-in seller's profile and their stores.
+ * Protected — requires a valid JWT Bearer token in the Authorization header.
+ */
+authRouter.get("/me", requireAuth, async (req: AuthRequest, res: Response) => {
+  try {
+    // req.userId is set by requireAuth after verifying the JWT
+    const user = await prisma.user.findUnique({
+      where: { id: req.userId },
+      select: {
+        id: true,
+        name: true,
+        phone: true,
+        email: true,
+        createdAt: true,
+        // Also return their stores so the dashboard knows which stores they own
+        stores: {
+          select: {
+            id: true,
+            slug: true,
+            name: true,
+            status: true,
+            trialEndsAt: true,
+            createdAt: true,
+          },
+        },
+      },
+    });
+
+    if (!user) {
+      res.status(404).json({ error: "User not found" });
+      return;
+    }
+
+    res.json({ user });
+  } catch (error) {
+    console.error("/me error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
