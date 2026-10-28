@@ -1,7 +1,7 @@
 import { Router, Request, Response } from "express";
 import { z } from "zod";
 import { prisma } from "../db.js";
-import { hashPassword, signToken, normalizePhone } from "../lib/auth.js";
+import { hashPassword, checkPassword, signToken, normalizePhone } from "../lib/auth.js";
 
 export const authRouter = Router();
 
@@ -95,3 +95,72 @@ authRouter.post("/register", async (req: Request, res: Response) => {
     res.status(500).json({ error: "Internal server error" });
   }
 });
+
+// Validation schema for Login
+const loginSchema = z.object({
+  phone: z.string().min(1, "Phone number is required"),
+  password: z.string().min(1, "Password is required"),
+});
+
+/**
+ * POST /api/auth/login
+ */
+authRouter.post("/login", async (req: Request, res: Response) => {
+  try {
+    const parseResult = loginSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      res.status(400).json({
+        error: "Validation failed",
+        details: parseResult.error.flatten().fieldErrors,
+      });
+      return;
+    }
+
+    const { phone: rawPhone, password } = parseResult.data;
+
+    // 1. Normalize the phone number
+    const phone = normalizePhone(rawPhone);
+    if (!phone) {
+      res.status(400).json({
+        error: "Invalid Ethiopian phone number. Must start with 09, 07, or +251",
+      });
+      return;
+    }
+
+    // 2. Find user by phone
+    const user = await prisma.user.findUnique({
+      where: { phone },
+    });
+    if (!user) {
+      res.status(401).json({ error: "Invalid phone number or password" });
+      return;
+    }
+
+    // 3. Verify password against the stored bcrypt hash
+    const isPasswordValid = await checkPassword(password, user.password);
+    if (!isPasswordValid) {
+      res.status(401).json({ error: "Invalid phone number or password" });
+      return;
+    }
+
+    // 4. Generate JWT token
+    const token = signToken(user.id);
+
+    // 5. Send back token and safe user details (no password)
+    res.json({
+      message: "Login successful",
+      token,
+      user: {
+        id: user.id,
+        name: user.name,
+        phone: user.phone,
+        email: user.email,
+        createdAt: user.createdAt,
+      },
+    });
+  } catch (error) {
+    console.error("Login error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
