@@ -1,4 +1,4 @@
-import { Router, Response } from "express";
+import { Router, Request, Response } from "express";
 import { z } from "zod";
 import { prisma } from "../db.js";
 import { Prisma } from "../generated/client.js";
@@ -158,6 +158,70 @@ storesRouter.get("/mine", requireAuth, async (req: AuthRequest, res: Response) =
     res.json({ stores });
   } catch (error) {
     console.error("Fetch my stores error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+/**
+ * GET /api/stores/:slug
+ * Public endpoint: accessible by buyers without logging in.
+ * Returns store public info and active/published products with variants.
+ */
+storesRouter.get("/:slug", async (req: Request, res: Response) => {
+  try {
+    const rawSlug = req.params.slug;
+    const slug = typeof rawSlug === "string" ? rawSlug.toLowerCase() : undefined;
+
+    if (!slug) {
+      res.status(400).json({ error: "Store slug is required" });
+      return;
+    }
+
+    const store = await prisma.store.findUnique({
+      where: { slug },
+      select: {
+        id: true,
+        slug: true,
+        name: true,
+        description: true,
+        logoUrl: true,
+        phone: true,
+        status: true,
+        createdAt: true,
+        products: {
+          where: { isPublished: true },
+          select: {
+            id: true,
+            name: true,
+            description: true,
+            imageUrls: true,
+            createdAt: true,
+            variants: {
+              select: {
+                id: true,
+                label: true,
+                priceCents: true,
+                stock: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!store) {
+      res.status(404).json({ error: "Store not found" });
+      return;
+    }
+
+    if (store.status === "SUSPENDED") {
+      res.status(403).json({ error: "This store is currently unavailable" });
+      return;
+    }
+
+    res.json({ store });
+  } catch (error) {
+    console.error("Get store by slug error:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 });
