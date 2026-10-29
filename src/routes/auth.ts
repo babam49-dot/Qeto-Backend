@@ -1,5 +1,6 @@
 import { Router, Request, Response } from "express";
 import { z } from "zod";
+import { Prisma } from "../generated/client.js";
 import { prisma } from "../db.js";
 import { hashPassword, checkPassword, signToken, normalizePhone } from "../lib/auth.js";
 import { requireAuth, AuthRequest } from "../middleware/requireAuth.js";
@@ -92,6 +93,19 @@ authRouter.post("/register", async (req: Request, res: Response) => {
       user,
     });
   } catch (error) {
+    // P2002 = Prisma unique constraint violation.
+    // This handles the race condition where two requests with the same
+    // phone/email both pass the findUnique check and the second create() fails.
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2002"
+    ) {
+      const field = (error.meta?.target as string[])?.includes("email")
+        ? "Email"
+        : "Phone number";
+      res.status(409).json({ error: `${field} is already registered` });
+      return;
+    }
     console.error("Register error:", error);
     res.status(500).json({ error: "Internal server error" });
   }
