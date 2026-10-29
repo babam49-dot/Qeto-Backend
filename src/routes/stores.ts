@@ -225,3 +225,84 @@ storesRouter.get("/:slug", async (req: Request, res: Response) => {
     res.status(500).json({ error: "Internal server error" });
   }
 });
+
+// Validation schema for updating a store
+const updateStoreSchema = z.object({
+  name: z.string().min(2, "Store name must be at least 2 characters").max(100).optional(),
+  phone: z.string().min(9, "Phone number is required").optional(),
+  description: z.string().max(500).optional(),
+  logoUrl: z.string().url("Invalid logo URL").optional().or(z.literal("")),
+});
+
+/**
+ * PATCH /api/stores/:id
+ * Protected endpoint: updates store details (name, phone, description, logoUrl).
+ * Validates ownership — only the seller who owns the store can update it.
+ */
+storesRouter.patch("/:id", requireAuth, async (req: AuthRequest, res: Response) => {
+  try {
+    const rawId = req.params.id;
+    const storeId = typeof rawId === "string" ? rawId : undefined;
+
+    if (!storeId) {
+      res.status(400).json({ error: "Store ID is required" });
+      return;
+    }
+
+    const parseResult = updateStoreSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      res.status(400).json({
+        error: "Validation failed",
+        details: parseResult.error.flatten().fieldErrors,
+      });
+      return;
+    }
+
+    // Check if store exists
+    const existingStore = await prisma.store.findUnique({
+      where: { id: storeId },
+    });
+
+    if (!existingStore) {
+      res.status(404).json({ error: "Store not found" });
+      return;
+    }
+
+    // Verify ownership
+    if (existingStore.ownerId !== req.userId) {
+      res.status(403).json({ error: "Forbidden: You do not own this store" });
+      return;
+    }
+
+    const { name, phone: rawPhone, description, logoUrl } = parseResult.data;
+
+    let normalizedPhone: string | null | undefined = undefined;
+    if (rawPhone) {
+      normalizedPhone = normalizePhone(rawPhone);
+      if (!normalizedPhone) {
+        res.status(400).json({
+          error: "Invalid Ethiopian phone number. Use format: 0912345678 or +251912345678",
+        });
+        return;
+      }
+    }
+
+    const updatedStore = await prisma.store.update({
+      where: { id: storeId },
+      data: {
+        ...(name !== undefined && { name }),
+        ...(normalizedPhone !== undefined && { phone: normalizedPhone }),
+        ...(description !== undefined && { description: description || null }),
+        ...(logoUrl !== undefined && { logoUrl: logoUrl || null }),
+      },
+    });
+
+    res.json({
+      message: "Store updated successfully",
+      store: updatedStore,
+    });
+  } catch (error) {
+    console.error("Update store error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
