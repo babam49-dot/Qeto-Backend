@@ -190,3 +190,118 @@ productsRouter.get("/:id", async (req: Request, res: Response) => {
     res.status(500).json({ error: "Internal server error" });
   }
 });
+
+// Validation schema for updating a product
+const updateProductSchema = z.object({
+  name: z.string().min(2, "Product name must be at least 2 characters").max(120).optional(),
+  description: z.string().max(2000).optional(),
+  imageUrls: z.array(z.string().url("Invalid image URL")).max(10).optional(),
+  isPublished: z.boolean().optional(),
+  variants: z
+    .array(
+      z.object({
+        id: z.string().optional(),
+        label: z.string().min(1).max(50),
+        priceCents: z.number().int().min(0),
+        stock: z.number().int().min(0),
+      })
+    )
+    .min(1)
+    .optional(),
+});
+
+/**
+ * PATCH /api/products/:id
+ * Protected endpoint: updates product details, publication status, or variants.
+ * Verifies that the authenticated seller owns the product's store.
+ */
+productsRouter.patch("/:id", requireAuth, async (req: AuthRequest, res: Response) => {
+  try {
+    const rawId = req.params.id;
+    const productId = typeof rawId === "string" ? rawId : undefined;
+
+    if (!productId) {
+      res.status(400).json({ error: "Product ID is required" });
+      return;
+    }
+
+    const parseResult = updateProductSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      res.status(400).json({
+        error: "Validation failed",
+        details: parseResult.error.flatten().fieldErrors,
+      });
+      return;
+    }
+
+    // Find product and include store to check ownership
+    const existing = await prisma.product.findUnique({
+      where: { id: productId },
+      include: { store: { select: { ownerId: true } } },
+    });
+
+    if (!existing) {
+      res.status(404).json({ error: "Product not found" });
+      return;
+    }
+
+    if (existing.store.ownerId !== req.userId) {
+      res.status(403).json({ error: "Forbidden: You do not own this product's store" });
+      return;
+    }
+
+    const { name, description, imageUrls, isPublished, variants } = parseResult.data;
+
+    // Perform updates
+    await prisma.$transaction(async (tx) => {
+      // 1. Update product base fields
+      await tx.product.update({
+        where: { id: productId },
+        data: {
+          ...(name !== undefined && { name }),
+          ...(description !== undefined && { description: description || null }),
+          ...(imageUrls !== undefined && { imageUrls }),
+          ...(isPublished !== undefined && { isPublished }),
+        },
+      });
+
+      // 2. Update or create variants if provided
+      if (variants) {
+        for (const v of variants) {
+          if (v.id) {
+            await tx.variant.update({
+              where: { id: v.id },
+              data: {
+                label: v.label,
+                priceCents: v.priceCents,
+                stock: v.stock,
+              },
+            });
+          } else {
+            await tx.variant.create({
+              data: {
+                productId,
+                label: v.label,
+                priceCents: v.priceCents,
+                stock: v.stock,
+              },
+            });
+          }
+        }
+      }
+    });
+
+    const updatedProduct = await prisma.product.findUnique({
+      where: { id: productId },
+      include: { variants: true },
+    });
+
+    res.json({
+      message: "Product updated successfully",
+      product: updatedProduct,
+    });
+  } catch (error) {
+    console.error("Update product error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
