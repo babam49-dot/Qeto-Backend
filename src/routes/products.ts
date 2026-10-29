@@ -305,3 +305,66 @@ productsRouter.patch("/:id", requireAuth, async (req: AuthRequest, res: Response
     res.status(500).json({ error: "Internal server error" });
   }
 });
+
+/**
+ * DELETE /api/products/:id
+ * Protected endpoint: Deletes a product and its variants.
+ * - Verifies that the authenticated seller owns the product's store.
+ * - If product has existing orders, prevents hard deletion and unpublishes instead.
+ * - Otherwise deletes variants and the product cleanly.
+ */
+productsRouter.delete("/:id", requireAuth, async (req: AuthRequest, res: Response) => {
+  try {
+    const rawId = req.params.id;
+    const productId = typeof rawId === "string" ? rawId : undefined;
+
+    if (!productId) {
+      res.status(400).json({ error: "Product ID is required" });
+      return;
+    }
+
+    const existing = await prisma.product.findUnique({
+      where: { id: productId },
+      include: { store: { select: { ownerId: true } } },
+    });
+
+    if (!existing) {
+      res.status(404).json({ error: "Product not found" });
+      return;
+    }
+
+    if (existing.store.ownerId !== req.userId) {
+      res.status(403).json({ error: "Forbidden: You do not own this product's store" });
+      return;
+    }
+
+    // Check if any variant is linked to existing order items
+    const orderItemsCount = await prisma.orderItem.count({
+      where: { variant: { productId } },
+    });
+
+    if (orderItemsCount > 0) {
+      // Unpublish so it no longer appears in the storefront, preserving order history
+      await prisma.product.update({
+        where: { id: productId },
+        data: { isPublished: false },
+      });
+
+      res.status(409).json({
+        error: "Product has associated orders and cannot be permanently deleted. It has been archived (unpublished) instead.",
+      });
+      return;
+    }
+
+    // Safe to delete variants and product in a transaction
+    await prisma.$transaction([
+      prisma.variant.deleteMany({ where: { productId } }),
+      prisma.product.delete({ where: { id: productId } }),
+    ]);
+
+    res.json({ message: "Product deleted successfully" });
+  } catch (error) {
+    console.error("Delete product error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
