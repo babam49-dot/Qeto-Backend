@@ -1,7 +1,8 @@
-import { Router, Response } from "express";
+import { Router, Request, Response } from "express";
 import { z } from "zod";
 import { prisma } from "../db.js";
 import { requireAuth, AuthRequest } from "../middleware/requireAuth.js";
+import { verifyToken } from "../lib/auth.js";
 
 export const productsRouter = Router();
 
@@ -85,6 +86,65 @@ productsRouter.post("/", requireAuth, async (req: AuthRequest, res: Response) =>
     });
   } catch (error) {
     console.error("Create product error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+/**
+ * GET /api/products/store/:storeId
+ * Lists products for a store along with their variants.
+ * - Store owner sees all products (including unpublished drafts).
+ * - Public visitors only see published products.
+ */
+productsRouter.get("/store/:storeId", async (req: Request, res: Response) => {
+  try {
+    const rawStoreId = req.params.storeId;
+    const storeId = typeof rawStoreId === "string" ? rawStoreId : undefined;
+
+    if (!storeId) {
+      res.status(400).json({ error: "Store ID is required" });
+      return;
+    }
+
+    const store = await prisma.store.findUnique({
+      where: { id: storeId },
+      select: { ownerId: true },
+    });
+
+    if (!store) {
+      res.status(404).json({ error: "Store not found" });
+      return;
+    }
+
+    // Check if requester is the store owner
+    let isOwner = false;
+    const authHeader = req.headers.authorization;
+    if (authHeader?.startsWith("Bearer ")) {
+      try {
+        const token = authHeader.slice(7).trim();
+        const payload = verifyToken(token);
+        if (payload.sub === store.ownerId) {
+          isOwner = true;
+        }
+      } catch {
+        // Invalid or expired token — treated as public visitor
+      }
+    }
+
+    const products = await prisma.product.findMany({
+      where: {
+        storeId,
+        ...(isOwner ? {} : { isPublished: true }),
+      },
+      orderBy: { createdAt: "desc" },
+      include: {
+        variants: true,
+      },
+    });
+
+    res.json({ products });
+  } catch (error) {
+    console.error("List store products error:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 });
