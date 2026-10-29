@@ -148,3 +148,45 @@ productsRouter.get("/store/:storeId", async (req: Request, res: Response) => {
     res.status(500).json({ error: "Internal server error" });
   }
 });
+
+/**
+ * GET /api/products/:id
+ * Fetches a single product by ID, along with its variants and store info.
+ */
+productsRouter.get("/:id", async (req: Request, res: Response) => {
+  try {
+    const rawId = req.params.id;
+    const productId = typeof rawId === "string" ? rawId : undefined;
+
+    if (!productId) {
+      res.status(400).json({ error: "Product ID is required" });
+      return;
+    }
+
+    const product = await prisma.product.findUnique({
+      where: { id: productId },
+      include: {
+        variants: true,
+        store: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            phone: true,
+            status: true,
+          },
+        },
+      },
+    });
+
+    if (!product) {
+      res.status(404).json({ error: "Product not found" });
+      return;
+    }
+
+    res.json({ product });
+  } catch (error) {
+    console.error("Get product error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
