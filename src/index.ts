@@ -3,6 +3,7 @@ import express from "express";
 import cors from "cors";
 import { prisma } from "./db.js";
 import { authRouter } from "./routes/auth.js";
+import { storesRouter } from "./routes/stores.js";
 
 const app = express();
 app.use(cors());
@@ -24,6 +25,7 @@ app.get("/health", async (_req, res) => {
 });
 
 app.use("/api/auth", authRouter);
+app.use("/api/stores", storesRouter);
 
 const port = process.env.PORT || 4000;
 app.listen(port, () => {
