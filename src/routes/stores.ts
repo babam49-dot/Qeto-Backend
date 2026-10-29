@@ -134,3 +134,30 @@ storesRouter.post("/", requireAuth, async (req: AuthRequest, res: Response) => {
     res.status(500).json({ error: "Internal server error" });
   }
 });
+
+/**
+ * GET /api/stores/mine
+ * Returns all stores owned by the authenticated seller.
+ * Includes counts of their products and orders for dashboard display.
+ */
+storesRouter.get("/mine", requireAuth, async (req: AuthRequest, res: Response) => {
+  try {
+    const stores = await prisma.store.findMany({
+      where: { ownerId: req.userId },
+      orderBy: { createdAt: "desc" },
+      include: {
+        _count: {
+          select: {
+            products: true,
+            orders: true,
+          },
+        },
+      },
+    });
+
+    res.json({ stores });
+  } catch (error) {
+    console.error("Fetch my stores error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
