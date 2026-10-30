@@ -84,3 +84,18 @@ export type Payment = Prisma.PaymentModel
  * 
  */
 export type WebhookEvent = Prisma.WebhookEventModel
+/**
+ * Model CommissionLedger
+ * 
+ */
+export type CommissionLedger = Prisma.CommissionLedgerModel
+/**
+ * Model Dispute
+ * 
+ */
+export type Dispute = Prisma.DisputeModel
+/**
+ * Model DisputeEvidence
+ * 
+ */
+export type DisputeEvidence = Prisma.DisputeEvidenceModel

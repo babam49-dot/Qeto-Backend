@@ -1,12 +1,9 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client"
-   output   = "../src/generated"
+  output   = "../src/generated"
 }
 
 datasource db {
@@ -14,7 +11,7 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum StoreStatus{
+enum StoreStatus {
   TRIAL
   ACTIVE
   SUSPENDED
@@ -23,9 +20,13 @@ enum StoreStatus{
 enum OrderStatus {
   PENDING_PAYMENT
   PAID
+  PAID_HELD
   COD_PENDING
   SHIPPED
   DELIVERED
+  RELEASED
+  DISPUTED
+  REFUNDED
   CANCELLED
   EXPIRED
 }
@@ -34,6 +35,26 @@ enum PaymentStatus {
   PENDING
   SUCCESS
   FAILED
+}
+
+enum LedgerEntryType {
+  HELD
+  RELEASED
+  REFUNDED
+  COMMISSION
+  PAYOUT_SENT
+  COD_COMMISSION_OWED
+}
+
+enum DisputeStatus {
+  OPEN
+  RESOLVED
+}
+
+enum DisputeDecision {
+  REFUND
+  RELEASE
+  PARTIAL
 }
 
 model User {
@@ -90,21 +111,32 @@ model Variant {
 }
 
 model Order {
-  id           String      @id @default(cuid())
-  storeId      String
-  store        Store       @relation(fields: [storeId], references: [id])
-  status       OrderStatus @default(PENDING_PAYMENT)
-  customerName String
-  phone        String
-  address      String
-  totalCents   Int
-  expiresAt    DateTime?
-  items        OrderItem[]
-  payments     Payment[]
-  createdAt    DateTime    @default(now())
+  id               String             @id @default(cuid())
+  orderToken       String             @unique @default(cuid())
+  storeId          String
+  store            Store              @relation(fields: [storeId], references: [id])
+  status           OrderStatus        @default(PENDING_PAYMENT)
+  paymentMethod    String             @default("ONLINE")
+  customerName     String
+  phone            String
+  address          String
+  totalCents       Int
+  deliveryCodeHash String?
+  codeAttempts     Int                @default(0)
+  shipDeadline     DateTime?
+  shippedAt        DateTime?
+  deliveredAt      DateTime?
+  releaseAt        DateTime?
+  expiresAt        DateTime?
+  items            OrderItem[]
+  payments         Payment[]
+  ledgerEntries    CommissionLedger[]
+  dispute          Dispute?
+  createdAt        DateTime           @default(now())
 
   @@index([storeId, status])
   @@index([status, expiresAt])
+  @@index([storeId, status, releaseAt])
 }
 
 model OrderItem {
@@ -135,4 +167,43 @@ model WebhookEvent {
   payload     Json
   processedAt DateTime?
   createdAt   DateTime  @default(now())
+}
+
+model CommissionLedger {
+  id          String          @id @default(cuid())
+  orderId     String
+  order       Order           @relation(fields: [orderId], references: [id])
+  storeId     String
+  type        LedgerEntryType
+  amountCents Int
+  note        String?
+  createdAt   DateTime        @default(now())
+
+  @@index([orderId])
+  @@index([storeId])
+}
+
+model Dispute {
+  id          String            @id @default(cuid())
+  orderId     String            @unique
+  order       Order             @relation(fields: [orderId], references: [id])
+  openedBy    String
+  reason      String
+  status      DisputeStatus     @default(OPEN)
+  decision    DisputeDecision?
+  refundCents Int?
+  decidedBy   String?
+  decidedAt   DateTime?
+  createdAt   DateTime          @default(now())
+  evidence    DisputeEvidence[]
+}
+
+model DisputeEvidence {
+  id        String   @id @default(cuid())
+  disputeId String
+  dispute   Dispute  @relation(fields: [disputeId], references: [id])
+  author    String
+  message   String
+  imageUrl  String?
+  createdAt DateTime @default(now())
 }

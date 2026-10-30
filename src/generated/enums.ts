@@ -21,9 +21,13 @@ export type StoreStatus = (typeof StoreStatus)[keyof typeof StoreStatus]
 export const OrderStatus = {
   PENDING_PAYMENT: 'PENDING_PAYMENT',
   PAID: 'PAID',
+  PAID_HELD: 'PAID_HELD',
   COD_PENDING: 'COD_PENDING',
   SHIPPED: 'SHIPPED',
   DELIVERED: 'DELIVERED',
+  RELEASED: 'RELEASED',
+  DISPUTED: 'DISPUTED',
+  REFUNDED: 'REFUNDED',
   CANCELLED: 'CANCELLED',
   EXPIRED: 'EXPIRED'
 } as const
@@ -38,3 +42,32 @@ export const PaymentStatus = {
 } as const
 
 export type PaymentStatus = (typeof PaymentStatus)[keyof typeof PaymentStatus]
+
+
+export const LedgerEntryType = {
+  HELD: 'HELD',
+  RELEASED: 'RELEASED',
+  REFUNDED: 'REFUNDED',
+  COMMISSION: 'COMMISSION',
+  PAYOUT_SENT: 'PAYOUT_SENT',
+  COD_COMMISSION_OWED: 'COD_COMMISSION_OWED'
+} as const
+
+export type LedgerEntryType = (typeof LedgerEntryType)[keyof typeof LedgerEntryType]
+
+
+export const DisputeStatus = {
+  OPEN: 'OPEN',
+  RESOLVED: 'RESOLVED'
+} as const
+
+export type DisputeStatus = (typeof DisputeStatus)[keyof typeof DisputeStatus]
+
+
+export const DisputeDecision = {
+  REFUND: 'REFUND',
+  RELEASE: 'RELEASE',
+  PARTIAL: 'PARTIAL'
+} as const
+
+export type DisputeDecision = (typeof DisputeDecision)[keyof typeof DisputeDecision]

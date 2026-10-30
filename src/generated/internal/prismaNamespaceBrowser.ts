@@ -56,7 +56,10 @@ export const ModelName = {
   Order: 'Order',
   OrderItem: 'OrderItem',
   Payment: 'Payment',
-  WebhookEvent: 'WebhookEvent'
+  WebhookEvent: 'WebhookEvent',
+  CommissionLedger: 'CommissionLedger',
+  Dispute: 'Dispute',
+  DisputeEvidence: 'DisputeEvidence'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -130,12 +133,20 @@ export type VariantScalarFieldEnum = (typeof VariantScalarFieldEnum)[keyof typeo
 
 export const OrderScalarFieldEnum = {
   id: 'id',
+  orderToken: 'orderToken',
   storeId: 'storeId',
   status: 'status',
+  paymentMethod: 'paymentMethod',
   customerName: 'customerName',
   phone: 'phone',
   address: 'address',
   totalCents: 'totalCents',
+  deliveryCodeHash: 'deliveryCodeHash',
+  codeAttempts: 'codeAttempts',
+  shipDeadline: 'shipDeadline',
+  shippedAt: 'shippedAt',
+  deliveredAt: 'deliveredAt',
+  releaseAt: 'releaseAt',
   expiresAt: 'expiresAt',
   createdAt: 'createdAt'
 } as const
@@ -177,6 +188,47 @@ export const WebhookEventScalarFieldEnum = {
 } as const
 
 export type WebhookEventScalarFieldEnum = (typeof WebhookEventScalarFieldEnum)[keyof typeof WebhookEventScalarFieldEnum]
+
+
+export const CommissionLedgerScalarFieldEnum = {
+  id: 'id',
+  orderId: 'orderId',
+  storeId: 'storeId',
+  type: 'type',
+  amountCents: 'amountCents',
+  note: 'note',
+  createdAt: 'createdAt'
+} as const
+
+export type CommissionLedgerScalarFieldEnum = (typeof CommissionLedgerScalarFieldEnum)[keyof typeof CommissionLedgerScalarFieldEnum]
+
+
+export const DisputeScalarFieldEnum = {
+  id: 'id',
+  orderId: 'orderId',
+  openedBy: 'openedBy',
+  reason: 'reason',
+  status: 'status',
+  decision: 'decision',
+  refundCents: 'refundCents',
+  decidedBy: 'decidedBy',
+  decidedAt: 'decidedAt',
+  createdAt: 'createdAt'
+} as const
+
+export type DisputeScalarFieldEnum = (typeof DisputeScalarFieldEnum)[keyof typeof DisputeScalarFieldEnum]
+
+
+export const DisputeEvidenceScalarFieldEnum = {
+  id: 'id',
+  disputeId: 'disputeId',
+  author: 'author',
+  message: 'message',
+  imageUrl: 'imageUrl',
+  createdAt: 'createdAt'
+} as const
+
+export type DisputeEvidenceScalarFieldEnum = (typeof DisputeEvidenceScalarFieldEnum)[keyof typeof DisputeEvidenceScalarFieldEnum]
 
 
 export const SortOrder = {

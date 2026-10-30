@@ -397,7 +397,10 @@ export const ModelName = {
   Order: 'Order',
   OrderItem: 'OrderItem',
   Payment: 'Payment',
-  WebhookEvent: 'WebhookEvent'
+  WebhookEvent: 'WebhookEvent',
+  CommissionLedger: 'CommissionLedger',
+  Dispute: 'Dispute',
+  DisputeEvidence: 'DisputeEvidence'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -413,7 +416,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "user" | "store" | "product" | "variant" | "order" | "orderItem" | "payment" | "webhookEvent"
+    modelProps: "user" | "store" | "product" | "variant" | "order" | "orderItem" | "payment" | "webhookEvent" | "commissionLedger" | "dispute" | "disputeEvidence"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -1009,6 +1012,228 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    CommissionLedger: {
+      payload: Prisma.$CommissionLedgerPayload<ExtArgs>
+      fields: Prisma.CommissionLedgerFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.CommissionLedgerFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CommissionLedgerPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.CommissionLedgerFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CommissionLedgerPayload>
+        }
+        findFirst: {
+          args: Prisma.CommissionLedgerFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CommissionLedgerPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.CommissionLedgerFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CommissionLedgerPayload>
+        }
+        findMany: {
+          args: Prisma.CommissionLedgerFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CommissionLedgerPayload>[]
+        }
+        create: {
+          args: Prisma.CommissionLedgerCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CommissionLedgerPayload>
+        }
+        createMany: {
+          args: Prisma.CommissionLedgerCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.CommissionLedgerCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CommissionLedgerPayload>[]
+        }
+        delete: {
+          args: Prisma.CommissionLedgerDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CommissionLedgerPayload>
+        }
+        update: {
+          args: Prisma.CommissionLedgerUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CommissionLedgerPayload>
+        }
+        deleteMany: {
+          args: Prisma.CommissionLedgerDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.CommissionLedgerUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.CommissionLedgerUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CommissionLedgerPayload>[]
+        }
+        upsert: {
+          args: Prisma.CommissionLedgerUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CommissionLedgerPayload>
+        }
+        aggregate: {
+          args: Prisma.CommissionLedgerAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateCommissionLedger>
+        }
+        groupBy: {
+          args: Prisma.CommissionLedgerGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.CommissionLedgerGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.CommissionLedgerCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.CommissionLedgerCountAggregateOutputType> | number
+        }
+      }
+    }
+    Dispute: {
+      payload: Prisma.$DisputePayload<ExtArgs>
+      fields: Prisma.DisputeFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.DisputeFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DisputePayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.DisputeFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DisputePayload>
+        }
+        findFirst: {
+          args: Prisma.DisputeFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DisputePayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.DisputeFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DisputePayload>
+        }
+        findMany: {
+          args: Prisma.DisputeFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DisputePayload>[]
+        }
+        create: {
+          args: Prisma.DisputeCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DisputePayload>
+        }
+        createMany: {
+          args: Prisma.DisputeCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.DisputeCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DisputePayload>[]
+        }
+        delete: {
+          args: Prisma.DisputeDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DisputePayload>
+        }
+        update: {
+          args: Prisma.DisputeUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DisputePayload>
+        }
+        deleteMany: {
+          args: Prisma.DisputeDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.DisputeUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.DisputeUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DisputePayload>[]
+        }
+        upsert: {
+          args: Prisma.DisputeUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DisputePayload>
+        }
+        aggregate: {
+          args: Prisma.DisputeAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateDispute>
+        }
+        groupBy: {
+          args: Prisma.DisputeGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.DisputeGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.DisputeCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.DisputeCountAggregateOutputType> | number
+        }
+      }
+    }
+    DisputeEvidence: {
+      payload: Prisma.$DisputeEvidencePayload<ExtArgs>
+      fields: Prisma.DisputeEvidenceFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.DisputeEvidenceFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DisputeEvidencePayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.DisputeEvidenceFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DisputeEvidencePayload>
+        }
+        findFirst: {
+          args: Prisma.DisputeEvidenceFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DisputeEvidencePayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.DisputeEvidenceFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DisputeEvidencePayload>
+        }
+        findMany: {
+          args: Prisma.DisputeEvidenceFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DisputeEvidencePayload>[]
+        }
+        create: {
+          args: Prisma.DisputeEvidenceCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DisputeEvidencePayload>
+        }
+        createMany: {
+          args: Prisma.DisputeEvidenceCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.DisputeEvidenceCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DisputeEvidencePayload>[]
+        }
+        delete: {
+          args: Prisma.DisputeEvidenceDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DisputeEvidencePayload>
+        }
+        update: {
+          args: Prisma.DisputeEvidenceUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DisputeEvidencePayload>
+        }
+        deleteMany: {
+          args: Prisma.DisputeEvidenceDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.DisputeEvidenceUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.DisputeEvidenceUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DisputeEvidencePayload>[]
+        }
+        upsert: {
+          args: Prisma.DisputeEvidenceUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DisputeEvidencePayload>
+        }
+        aggregate: {
+          args: Prisma.DisputeEvidenceAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateDisputeEvidence>
+        }
+        groupBy: {
+          args: Prisma.DisputeEvidenceGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.DisputeEvidenceGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.DisputeEvidenceCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.DisputeEvidenceCountAggregateOutputType> | number
+        }
+      }
+    }
   }
 } & {
   other: {
@@ -1103,12 +1328,20 @@ export type VariantScalarFieldEnum = (typeof VariantScalarFieldEnum)[keyof typeo
 
 export const OrderScalarFieldEnum = {
   id: 'id',
+  orderToken: 'orderToken',
   storeId: 'storeId',
   status: 'status',
+  paymentMethod: 'paymentMethod',
   customerName: 'customerName',
   phone: 'phone',
   address: 'address',
   totalCents: 'totalCents',
+  deliveryCodeHash: 'deliveryCodeHash',
+  codeAttempts: 'codeAttempts',
+  shipDeadline: 'shipDeadline',
+  shippedAt: 'shippedAt',
+  deliveredAt: 'deliveredAt',
+  releaseAt: 'releaseAt',
   expiresAt: 'expiresAt',
   createdAt: 'createdAt'
 } as const
@@ -1150,6 +1383,47 @@ export const WebhookEventScalarFieldEnum = {
 } as const
 
 export type WebhookEventScalarFieldEnum = (typeof WebhookEventScalarFieldEnum)[keyof typeof WebhookEventScalarFieldEnum]
+
+
+export const CommissionLedgerScalarFieldEnum = {
+  id: 'id',
+  orderId: 'orderId',
+  storeId: 'storeId',
+  type: 'type',
+  amountCents: 'amountCents',
+  note: 'note',
+  createdAt: 'createdAt'
+} as const
+
+export type CommissionLedgerScalarFieldEnum = (typeof CommissionLedgerScalarFieldEnum)[keyof typeof CommissionLedgerScalarFieldEnum]
+
+
+export const DisputeScalarFieldEnum = {
+  id: 'id',
+  orderId: 'orderId',
+  openedBy: 'openedBy',
+  reason: 'reason',
+  status: 'status',
+  decision: 'decision',
+  refundCents: 'refundCents',
+  decidedBy: 'decidedBy',
+  decidedAt: 'decidedAt',
+  createdAt: 'createdAt'
+} as const
+
+export type DisputeScalarFieldEnum = (typeof DisputeScalarFieldEnum)[keyof typeof DisputeScalarFieldEnum]
+
+
+export const DisputeEvidenceScalarFieldEnum = {
+  id: 'id',
+  disputeId: 'disputeId',
+  author: 'author',
+  message: 'message',
+  imageUrl: 'imageUrl',
+  createdAt: 'createdAt'
+} as const
+
+export type DisputeEvidenceScalarFieldEnum = (typeof DisputeEvidenceScalarFieldEnum)[keyof typeof DisputeEvidenceScalarFieldEnum]
 
 
 export const SortOrder = {
@@ -1304,6 +1578,48 @@ export type EnumQueryModeFieldRefInput<$PrismaModel> = FieldRefInputType<$Prisma
 
 
 /**
+ * Reference to a field of type 'LedgerEntryType'
+ */
+export type EnumLedgerEntryTypeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'LedgerEntryType'>
+    
+
+
+/**
+ * Reference to a field of type 'LedgerEntryType[]'
+ */
+export type ListEnumLedgerEntryTypeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'LedgerEntryType[]'>
+    
+
+
+/**
+ * Reference to a field of type 'DisputeStatus'
+ */
+export type EnumDisputeStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'DisputeStatus'>
+    
+
+
+/**
+ * Reference to a field of type 'DisputeStatus[]'
+ */
+export type ListEnumDisputeStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'DisputeStatus[]'>
+    
+
+
+/**
+ * Reference to a field of type 'DisputeDecision'
+ */
+export type EnumDisputeDecisionFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'DisputeDecision'>
+    
+
+
+/**
+ * Reference to a field of type 'DisputeDecision[]'
+ */
+export type ListEnumDisputeDecisionFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'DisputeDecision[]'>
+    
+
+
+/**
  * Reference to a field of type 'Float'
  */
 export type FloatFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Float'>
@@ -1411,6 +1727,9 @@ export type GlobalOmitConfig = {
   orderItem?: Prisma.OrderItemOmit
   payment?: Prisma.PaymentOmit
   webhookEvent?: Prisma.WebhookEventOmit
+  commissionLedger?: Prisma.CommissionLedgerOmit
+  dispute?: Prisma.DisputeOmit
+  disputeEvidence?: Prisma.DisputeEvidenceOmit
 }
 
 /* Types for Logging */
