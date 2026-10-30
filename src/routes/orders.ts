@@ -8,6 +8,12 @@ import { OrderStatus, LedgerEntryType } from "../generated/enums.js";
 
 export const ordersRouter = Router();
 
+// Helper to safely extract single string route params in Express 5
+function getParam(param: string | string[] | undefined): string {
+  if (Array.isArray(param)) return param[0] ?? "";
+  return param ?? "";
+}
+
 // Helper to hash 4-digit delivery code using SHA-256
 export function hashDeliveryCode(code: string): string {
   return crypto.createHash("sha256").update(code.trim()).digest("hex");
@@ -226,7 +232,6 @@ ordersRouter.post("/", async (req: Request, res: Response) => {
         totalETB: (result.totalCents / 100).toFixed(2),
         expiresAt: result.expiresAt,
         items: result.items,
-        // Provide the secret delivery code to the buyer so they can present it on arrival
         deliveryCode: rawDeliveryCode,
       },
     });
@@ -243,7 +248,11 @@ ordersRouter.post("/", async (req: Request, res: Response) => {
  */
 ordersRouter.get("/public/:orderToken", async (req: Request, res: Response) => {
   try {
-    const { orderToken } = req.params;
+    const orderToken = getParam(req.params.orderToken);
+    if (!orderToken) {
+      res.status(400).json({ error: "Order token is required" });
+      return;
+    }
 
     const order = await prisma.order.findUnique({
       where: { orderToken },
@@ -315,7 +324,11 @@ ordersRouter.get("/public/:orderToken", async (req: Request, res: Response) => {
  */
 ordersRouter.post("/public/:orderToken/confirm-received", async (req: Request, res: Response) => {
   try {
-    const { orderToken } = req.params;
+    const orderToken = getParam(req.params.orderToken);
+    if (!orderToken) {
+      res.status(400).json({ error: "Order token is required" });
+      return;
+    }
 
     const order = await prisma.order.findUnique({
       where: { orderToken },
@@ -368,9 +381,13 @@ ordersRouter.post("/public/:orderToken/confirm-received", async (req: Request, r
  */
 ordersRouter.post("/public/:orderToken/dispute", async (req: Request, res: Response) => {
   try {
-    const { orderToken } = req.params;
-    const parseResult = disputeSchema.safeParse(req.body);
+    const orderToken = getParam(req.params.orderToken);
+    if (!orderToken) {
+      res.status(400).json({ error: "Order token is required" });
+      return;
+    }
 
+    const parseResult = disputeSchema.safeParse(req.body);
     if (!parseResult.success) {
       res.status(400).json({
         error: "Validation failed",
@@ -456,9 +473,13 @@ ordersRouter.post("/public/:orderToken/dispute", async (req: Request, res: Respo
  */
 ordersRouter.get("/store/:storeId", requireAuth, async (req: AuthRequest, res: Response) => {
   try {
-    const { storeId } = req.params;
-    const { status, page = "1", limit = "20" } = req.query;
+    const storeId = getParam(req.params.storeId);
+    if (!storeId) {
+      res.status(400).json({ error: "Store ID is required" });
+      return;
+    }
 
+    const { status, page = "1", limit = "20" } = req.query;
     const pageNum = Math.max(1, parseInt(page as string, 10) || 1);
     const limitNum = Math.min(100, Math.max(1, parseInt(limit as string, 10) || 20));
     const skip = (pageNum - 1) * limitNum;
@@ -543,7 +564,11 @@ ordersRouter.get("/store/:storeId", requireAuth, async (req: AuthRequest, res: R
  */
 ordersRouter.get("/:id", requireAuth, async (req: AuthRequest, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = getParam(req.params.id);
+    if (!id) {
+      res.status(400).json({ error: "Order ID is required" });
+      return;
+    }
 
     const order = await prisma.order.findUnique({
       where: { id },
@@ -614,7 +639,11 @@ ordersRouter.get("/:id", requireAuth, async (req: AuthRequest, res: Response) =>
  */
 ordersRouter.patch("/:id/ship", requireAuth, async (req: AuthRequest, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = getParam(req.params.id);
+    if (!id) {
+      res.status(400).json({ error: "Order ID is required" });
+      return;
+    }
 
     const order = await prisma.order.findUnique({
       where: { id },
@@ -670,9 +699,13 @@ ordersRouter.patch("/:id/ship", requireAuth, async (req: AuthRequest, res: Respo
  */
 ordersRouter.post("/:id/confirm-delivery", requireAuth, async (req: AuthRequest, res: Response) => {
   try {
-    const { id } = req.params;
-    const parseResult = deliveryCodeSchema.safeParse(req.body);
+    const id = getParam(req.params.id);
+    if (!id) {
+      res.status(400).json({ error: "Order ID is required" });
+      return;
+    }
 
+    const parseResult = deliveryCodeSchema.safeParse(req.body);
     if (!parseResult.success) {
       res.status(400).json({
         error: "Validation failed",
@@ -762,7 +795,11 @@ ordersRouter.post("/:id/confirm-delivery", requireAuth, async (req: AuthRequest,
  */
 ordersRouter.post("/:id/cancel", requireAuth, async (req: AuthRequest, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = getParam(req.params.id);
+    if (!id) {
+      res.status(400).json({ error: "Order ID is required" });
+      return;
+    }
 
     const order = await prisma.order.findUnique({
       where: { id },
@@ -851,7 +888,11 @@ ordersRouter.post("/:id/cancel", requireAuth, async (req: AuthRequest, res: Resp
  */
 ordersRouter.post("/:id/release-funds", requireAuth, async (req: AuthRequest, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = getParam(req.params.id);
+    if (!id) {
+      res.status(400).json({ error: "Order ID is required" });
+      return;
+    }
 
     const order = await prisma.order.findUnique({
       where: { id },
