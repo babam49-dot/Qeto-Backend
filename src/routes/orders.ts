@@ -24,6 +24,18 @@ export function generateDeliveryCode(): string {
   return Math.floor(1000 + Math.random() * 9000).toString();
 }
 
+// Helper to resolve 4-digit delivery code from its SHA-256 hash for verified buyer tracking
+export function findDeliveryCodeFromHash(hash: string | null): string | null {
+  if (!hash) return null;
+  for (let i = 1000; i <= 9999; i++) {
+    const candidate = i.toString();
+    if (crypto.createHash("sha256").update(candidate).digest("hex") === hash) {
+      return candidate;
+    }
+  }
+  return null;
+}
+
 // Helper to generate unguessable public order token
 export function generateOrderToken(): string {
   return crypto.randomBytes(20).toString("hex");
@@ -282,6 +294,16 @@ ordersRouter.get("/public/:orderToken", async (req: Request, res: Response) => {
       return;
     }
 
+    // Reveal secret delivery code only once payment is verified into escrow
+    const paidStatuses: OrderStatus[] = [
+      OrderStatus.PAID_HELD,
+      OrderStatus.SHIPPED,
+      OrderStatus.DELIVERED,
+      OrderStatus.RELEASED,
+    ];
+    const isPaidOrLater = paidStatuses.includes(order.status);
+    const activeDeliveryCode = isPaidOrLater ? findDeliveryCodeFromHash(order.deliveryCodeHash) : null;
+
     res.json({
       order: {
         id: order.id,
@@ -293,6 +315,7 @@ ordersRouter.get("/public/:orderToken", async (req: Request, res: Response) => {
         address: order.address,
         totalCents: order.totalCents,
         totalETB: (order.totalCents / 100).toFixed(2),
+        deliveryCode: activeDeliveryCode,
         shipDeadline: order.shipDeadline,
         shippedAt: order.shippedAt,
         deliveredAt: order.deliveredAt,
