@@ -1,8 +1,9 @@
 import { prisma } from "../db.js";
+import { Prisma } from "../generated/client.js";
 import { LedgerEntryType } from "../generated/enums.js";
 
 // Supports executing within an ongoing database transaction or standalone
-type DbClient = typeof prisma;
+type DbClient = typeof prisma | Prisma.TransactionClient;
 
 export interface RecordLedgerParams {
   orderId?: string | null;
@@ -157,3 +158,4 @@ export const ledger = {
     };
   },
 };
+

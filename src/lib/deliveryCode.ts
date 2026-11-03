@@ -35,3 +35,4 @@ export function findDeliveryCodeFromHash(hash: string | null): string | null {
 export function generateOrderToken(): string {
   return crypto.randomBytes(20).toString("hex");
 }
+

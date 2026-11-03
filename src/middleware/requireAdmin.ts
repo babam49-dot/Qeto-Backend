@@ -34,3 +34,4 @@ export async function requireAdmin(
     res.status(500).json({ error: "Internal authorization error" });
   }
 }
+

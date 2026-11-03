@@ -9,7 +9,6 @@ import {
 } from "../lib/chapa.js";
 import { OrderStatus, PaymentStatus } from "../generated/enums.js";
 import { getParam } from "../lib/params.js";
-import { centsToETB } from "../lib/money.js";
 import { ledger } from "../lib/ledger.js";
 
 export const paymentsRouter = Router();

@@ -36,3 +36,4 @@ export function validateQuery(schema: ZodSchema) {
     next();
   };
 }
+
