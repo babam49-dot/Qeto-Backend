@@ -7,6 +7,7 @@ import { storesRouter } from "./routes/stores.js";
 import { productsRouter } from "./routes/products.js";
 import { ordersRouter } from "./routes/orders.js";
 import { paymentsRouter } from "./routes/payments.js";
+import { payoutsRouter } from "./routes/payouts.js";
 
 const app = express();
 app.use(cors());
@@ -32,6 +33,7 @@ app.use("/api/stores", storesRouter);
 app.use("/api/products", productsRouter);
 app.use("/api/orders", ordersRouter);
 app.use("/api/payments", paymentsRouter);
+app.use("/api/payouts", payoutsRouter);
 
 const port = process.env.PORT || 4000;
 app.listen(port, () => {

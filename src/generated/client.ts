@@ -99,3 +99,13 @@ export type Dispute = Prisma.DisputeModel
  * 
  */
 export type DisputeEvidence = Prisma.DisputeEvidenceModel
+/**
+ * Model PayoutAccount
+ * 
+ */
+export type PayoutAccount = Prisma.PayoutAccountModel
+/**
+ * Model Payout
+ * 
+ */
+export type Payout = Prisma.PayoutModel

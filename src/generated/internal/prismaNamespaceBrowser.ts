@@ -59,7 +59,9 @@ export const ModelName = {
   WebhookEvent: 'WebhookEvent',
   CommissionLedger: 'CommissionLedger',
   Dispute: 'Dispute',
-  DisputeEvidence: 'DisputeEvidence'
+  DisputeEvidence: 'DisputeEvidence',
+  PayoutAccount: 'PayoutAccount',
+  Payout: 'Payout'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -229,6 +231,40 @@ export const DisputeEvidenceScalarFieldEnum = {
 } as const
 
 export type DisputeEvidenceScalarFieldEnum = (typeof DisputeEvidenceScalarFieldEnum)[keyof typeof DisputeEvidenceScalarFieldEnum]
+
+
+export const PayoutAccountScalarFieldEnum = {
+  id: 'id',
+  storeId: 'storeId',
+  bankCode: 'bankCode',
+  bankName: 'bankName',
+  accountNumber: 'accountNumber',
+  accountName: 'accountName',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type PayoutAccountScalarFieldEnum = (typeof PayoutAccountScalarFieldEnum)[keyof typeof PayoutAccountScalarFieldEnum]
+
+
+export const PayoutScalarFieldEnum = {
+  id: 'id',
+  orderId: 'orderId',
+  storeId: 'storeId',
+  amountCents: 'amountCents',
+  status: 'status',
+  bankName: 'bankName',
+  accountNumber: 'accountNumber',
+  accountName: 'accountName',
+  providerRef: 'providerRef',
+  attempts: 'attempts',
+  idempotencyKey: 'idempotencyKey',
+  failureReason: 'failureReason',
+  createdAt: 'createdAt',
+  processedAt: 'processedAt'
+} as const
+
+export type PayoutScalarFieldEnum = (typeof PayoutScalarFieldEnum)[keyof typeof PayoutScalarFieldEnum]
 
 
 export const SortOrder = {

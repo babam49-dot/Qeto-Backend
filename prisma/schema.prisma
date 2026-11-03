@@ -37,6 +37,12 @@ enum PaymentStatus {
   FAILED
 }
 
+enum PayoutStatus {
+  PENDING
+  SENT
+  FAILED
+}
+
 enum LedgerEntryType {
   HELD
   RELEASED
@@ -78,10 +84,12 @@ model Store {
   owner         User        @relation(fields: [ownerId], references: [id])
   products      Product[]
   orders        Order[]
-  status        StoreStatus @default(TRIAL)
-  trialEndsAt   DateTime    @default(now())
-  commissionBps Int         @default(300)
-  createdAt     DateTime    @default(now())
+  status        StoreStatus    @default(TRIAL)
+  trialEndsAt   DateTime       @default(now())
+  commissionBps Int            @default(300)
+  payoutAccount PayoutAccount?
+  payouts       Payout[]
+  createdAt     DateTime       @default(now())
 }
 
 model Product {
@@ -130,6 +138,7 @@ model Order {
   expiresAt        DateTime?
   items            OrderItem[]
   payments         Payment[]
+  payouts          Payout[]
   ledgerEntries    CommissionLedger[]
   dispute          Dispute?
   createdAt        DateTime           @default(now())
@@ -171,8 +180,8 @@ model WebhookEvent {
 
 model CommissionLedger {
   id          String          @id @default(cuid())
-  orderId     String
-  order       Order           @relation(fields: [orderId], references: [id])
+  orderId     String?
+  order       Order?          @relation(fields: [orderId], references: [id])
   storeId     String
   type        LedgerEntryType
   amountCents Int
@@ -206,4 +215,38 @@ model DisputeEvidence {
   message   String
   imageUrl  String?
   createdAt DateTime @default(now())
+}
+
+model PayoutAccount {
+  id            String   @id @default(cuid())
+  storeId       String   @unique
+  store         Store    @relation(fields: [storeId], references: [id])
+  bankCode      String
+  bankName      String
+  accountNumber String
+  accountName   String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model Payout {
+  id             String       @id @default(cuid())
+  orderId        String?
+  order          Order?       @relation(fields: [orderId], references: [id])
+  storeId        String
+  store          Store        @relation(fields: [storeId], references: [id])
+  amountCents    Int
+  status         PayoutStatus @default(PENDING)
+  bankName       String
+  accountNumber  String
+  accountName    String
+  providerRef    String?
+  attempts       Int          @default(0)
+  idempotencyKey String       @unique
+  failureReason  String?
+  createdAt      DateTime     @default(now())
+  processedAt    DateTime?
+
+  @@index([storeId, status])
+  @@index([status])
 }
