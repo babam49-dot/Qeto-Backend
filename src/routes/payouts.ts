@@ -5,14 +5,9 @@ import { prisma } from "../db.js";
 import { requireAuth, AuthRequest } from "../middleware/requireAuth.js";
 import { getEthiopianBanks, createChapaPayout } from "../lib/chapa.js";
 import { LedgerEntryType, PayoutStatus } from "../generated/enums.js";
+import { getParam } from "../lib/params.js";
 
 export const payoutsRouter = Router();
-
-// Helper to safely extract single string route params in Express 5
-function getParam(param: string | string[] | undefined): string {
-  if (Array.isArray(param)) return param[0] ?? "";
-  return param ?? "";
-}
 
 // -------------------------------------------------------------
 // Validation Schemas

@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "../db.js";
 import { requireAuth, AuthRequest } from "../middleware/requireAuth.js";
 import { verifyToken } from "../lib/auth.js";
+import { getParam } from "../lib/params.js";
 
 export const productsRouter = Router();
 
@@ -98,8 +99,7 @@ productsRouter.post("/", requireAuth, async (req: AuthRequest, res: Response) =>
  */
 productsRouter.get("/store/:storeId", async (req: Request, res: Response) => {
   try {
-    const rawStoreId = req.params.storeId;
-    const storeId = typeof rawStoreId === "string" ? rawStoreId : undefined;
+    const storeId = getParam(req.params.storeId);
 
     if (!storeId) {
       res.status(400).json({ error: "Store ID is required" });
@@ -155,8 +155,7 @@ productsRouter.get("/store/:storeId", async (req: Request, res: Response) => {
  */
 productsRouter.get("/:id", async (req: Request, res: Response) => {
   try {
-    const rawId = req.params.id;
-    const productId = typeof rawId === "string" ? rawId : undefined;
+    const productId = getParam(req.params.id);
 
     if (!productId) {
       res.status(400).json({ error: "Product ID is required" });
@@ -217,8 +216,7 @@ const updateProductSchema = z.object({
  */
 productsRouter.patch("/:id", requireAuth, async (req: AuthRequest, res: Response) => {
   try {
-    const rawId = req.params.id;
-    const productId = typeof rawId === "string" ? rawId : undefined;
+    const productId = getParam(req.params.id);
 
     if (!productId) {
       res.status(400).json({ error: "Product ID is required" });
@@ -315,8 +313,7 @@ productsRouter.patch("/:id", requireAuth, async (req: AuthRequest, res: Response
  */
 productsRouter.delete("/:id", requireAuth, async (req: AuthRequest, res: Response) => {
   try {
-    const rawId = req.params.id;
-    const productId = typeof rawId === "string" ? rawId : undefined;
+    const productId = getParam(req.params.id);
 
     if (!productId) {
       res.status(400).json({ error: "Product ID is required" });

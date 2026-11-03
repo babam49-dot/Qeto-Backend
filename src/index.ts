@@ -8,6 +8,7 @@ import { productsRouter } from "./routes/products.js";
 import { ordersRouter } from "./routes/orders.js";
 import { paymentsRouter } from "./routes/payments.js";
 import { payoutsRouter } from "./routes/payouts.js";
+import { startEscrowWorker } from "./workers/escrow.js";
 
 const app = express();
 app.use(cors());
@@ -37,4 +38,7 @@ app.use("/api/payouts", payoutsRouter);
 const port = process.env.PORT || 4000;
 app.listen(port, () => {
   console.log(`Qeto API running on http://localhost:${port}`);
+  // Start background escrow worker — auto-releases funds, expires unpaid orders,
+  // and refunds buyers whose sellers missed the shipping deadline.
+  startEscrowWorker();
 });

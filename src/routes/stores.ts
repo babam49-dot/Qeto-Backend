@@ -4,6 +4,7 @@ import { prisma } from "../db.js";
 import { Prisma } from "../generated/client.js";
 import { requireAuth, AuthRequest } from "../middleware/requireAuth.js";
 import { normalizePhone } from "../lib/auth.js";
+import { getParam } from "../lib/params.js";
 
 export const storesRouter = Router();
 
@@ -47,6 +48,9 @@ const createStoreSchema = z.object({
   description: z.string().max(500).optional(),
   logoUrl: z.string().url("Invalid logo URL").optional().or(z.literal("")),
 });
+
+// Validation schema for updating a store (all fields optional)
+const updateStoreSchema = createStoreSchema.partial();
 
 /**
  * POST /api/stores
@@ -169,8 +173,7 @@ storesRouter.get("/mine", requireAuth, async (req: AuthRequest, res: Response) =
  */
 storesRouter.get("/:slug", async (req: Request, res: Response) => {
   try {
-    const rawSlug = req.params.slug;
-    const slug = typeof rawSlug === "string" ? rawSlug.toLowerCase() : undefined;
+    const slug = getParam(req.params.slug).toLowerCase();
 
     if (!slug) {
       res.status(400).json({ error: "Store slug is required" });
@@ -226,13 +229,6 @@ storesRouter.get("/:slug", async (req: Request, res: Response) => {
   }
 });
 
-// Validation schema for updating a store
-const updateStoreSchema = z.object({
-  name: z.string().min(2, "Store name must be at least 2 characters").max(100).optional(),
-  phone: z.string().min(9, "Phone number is required").optional(),
-  description: z.string().max(500).optional(),
-  logoUrl: z.string().url("Invalid logo URL").optional().or(z.literal("")),
-});
 
 /**
  * PATCH /api/stores/:id
@@ -241,8 +237,7 @@ const updateStoreSchema = z.object({
  */
 storesRouter.patch("/:id", requireAuth, async (req: AuthRequest, res: Response) => {
   try {
-    const rawId = req.params.id;
-    const storeId = typeof rawId === "string" ? rawId : undefined;
+    const storeId = getParam(req.params.id);
 
     if (!storeId) {
       res.status(400).json({ error: "Store ID is required" });

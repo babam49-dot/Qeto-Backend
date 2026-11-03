@@ -8,14 +8,9 @@ import {
   verifyChapaWebhookSignature,
 } from "../lib/chapa.js";
 import { OrderStatus, PaymentStatus, LedgerEntryType } from "../generated/enums.js";
+import { getParam } from "../lib/params.js";
 
 export const paymentsRouter = Router();
-
-// Helper to safely extract single string route params in Express 5
-function getParam(param: string | string[] | undefined): string {
-  if (Array.isArray(param)) return param[0] ?? "";
-  return param ?? "";
-}
 
 const initializePaymentSchema = z.object({
   orderToken: z.string().min(1, "Order token is required"),
