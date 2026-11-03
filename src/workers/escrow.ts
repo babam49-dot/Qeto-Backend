@@ -57,7 +57,7 @@ export async function autoReleaseEscrow(): Promise<void> {
             amountCents: commissionCents,
             note: `Auto-released: Qeto platform commission (${order.store.commissionBps / 100}%)`,
           },
-          tx as any
+          tx
         );
 
         // 3. Record merchant's net funds as released for withdrawal
@@ -68,7 +68,7 @@ export async function autoReleaseEscrow(): Promise<void> {
             amountCents: merchantNetCents,
             note: "Auto-released: Merchant net funds available after buyer protection window expired",
           },
-          tx as any
+          tx
         );
 
         // 4. Move the order to RELEASED — escrow lifecycle complete
@@ -191,7 +191,7 @@ export async function timeoutShipDeadlines(): Promise<void> {
             amountCents: order.totalCents,
             note: "Auto-refunded: Seller missed 3-day shipping deadline. Full refund issued to buyer.",
           },
-          tx as any
+          tx
         );
 
         // 3. Mark order as REFUNDED — escrow released back to buyer

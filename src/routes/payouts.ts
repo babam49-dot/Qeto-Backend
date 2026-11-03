@@ -337,7 +337,7 @@ payoutsRouter.post("/request", requireAuth, async (req: AuthRequest, res: Respon
             amountCents: requestedCents,
             note: `Payout transfer to ${store.payoutAccount?.bankName} (${store.payoutAccount?.accountNumber}). Ref: ${chapaResult.providerRef || idempotencyKey}`,
           },
-          tx as any
+          tx
         );
 
         return p;

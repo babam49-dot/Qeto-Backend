@@ -205,7 +205,7 @@ paymentsRouter.get("/verify/:txRef", async (req: Request, res: Response) => {
             amountCents: order.totalCents,
             note: `Payment verified via Chapa (tx_ref: ${txRef}). Funds held in escrow until delivery confirmation.`,
           },
-          tx as any
+          tx
         );
 
         return updatedOrder;
@@ -344,7 +344,7 @@ paymentsRouter.post("/webhook", async (req: Request, res: Response) => {
               amountCents: order.totalCents,
               note: "Webhook verified via Chapa. Funds held in escrow until delivery.",
             },
-            tx as any
+            tx
           );
 
           await tx.webhookEvent.update({
@@ -428,7 +428,7 @@ paymentsRouter.post("/simulate-success", async (req: Request, res: Response) => 
           amountCents: order.totalCents,
           note: "Simulated sandbox payment verified. Gross funds held safely in escrow.",
         },
-        tx as any
+        tx
       );
 
       return ord;

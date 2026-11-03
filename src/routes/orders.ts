@@ -198,7 +198,7 @@ ordersRouter.post("/", async (req: Request, res: Response) => {
             amountCents: commissionCents,
             note: `COD order commission owed (${store.commissionBps / 100}% of ${centsToETB(totalCents)} ETB)`,
           },
-          tx as any
+          tx
         );
       }
 
@@ -848,7 +848,7 @@ ordersRouter.post("/:id/cancel", requireAuth, async (req: AuthRequest, res: Resp
             amountCents: order.totalCents,
             note: "Order cancelled before dispatch - full refund issued to buyer",
           },
-          tx as any
+          tx
         );
 
         return tx.order.update({
@@ -938,7 +938,7 @@ ordersRouter.post("/:id/release-funds", requireAuth, async (req: AuthRequest, re
           amountCents: commissionCents,
           note: `Qeto platform commission (${order.store.commissionBps / 100}%)`,
         },
-        tx as any
+        tx
       );
 
       // Append RELEASED entry
@@ -949,7 +949,7 @@ ordersRouter.post("/:id/release-funds", requireAuth, async (req: AuthRequest, re
           amountCents: merchantNetCents,
           note: "Merchant net funds released for payout",
         },
-        tx as any
+        tx
       );
 
       // Update status to RELEASED
