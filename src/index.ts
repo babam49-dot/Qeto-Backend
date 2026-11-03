@@ -8,6 +8,7 @@ import { productsRouter } from "./routes/products.js";
 import { ordersRouter } from "./routes/orders.js";
 import { paymentsRouter } from "./routes/payments.js";
 import { payoutsRouter } from "./routes/payouts.js";
+import { errorHandler } from "./middleware/errorHandler.js";
 import { startEscrowWorker } from "./workers/escrow.js";
 
 const app = express();
@@ -34,6 +35,9 @@ app.use("/api/products", productsRouter);
 app.use("/api/orders", ordersRouter);
 app.use("/api/payments", paymentsRouter);
 app.use("/api/payouts", payoutsRouter);
+
+// Centralized error handling middleware
+app.use(errorHandler);
 
 const port = process.env.PORT || 4000;
 app.listen(port, () => {

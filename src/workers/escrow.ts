@@ -1,5 +1,7 @@
 import { prisma } from "../db.js";
-import { OrderStatus, LedgerEntryType } from "../generated/enums.js";
+import { OrderStatus } from "../generated/enums.js";
+import { calculateCommission } from "../lib/money.js";
+import { ledger } from "../lib/ledger.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // ESCROW WORKER
@@ -41,38 +43,35 @@ export async function autoReleaseEscrow(): Promise<void> {
   for (const order of eligibleOrders) {
     try {
       await prisma.$transaction(async (tx) => {
-        // 1. Calculate commission (basis points: 300 bps = 3%)
-        //    commissionBps / 10_000 gives the fraction, e.g. 300 / 10000 = 0.03
-        const commissionCents = Math.round(
-          (order.totalCents * order.store.commissionBps) / 10_000
+        // 1. Calculate commission and merchant net using shared money utility
+        const { commissionCents, merchantNetCents } = calculateCommission(
+          order.totalCents,
+          order.store.commissionBps
         );
 
-        // 2. Merchant receives the gross amount minus Qeto's commission
-        const merchantNetCents = order.totalCents - commissionCents;
-
-        // 3. Record Qeto's platform commission in the ledger (our revenue)
-        await tx.commissionLedger.create({
-          data: {
+        // 2. Record Qeto's platform commission in the append-only ledger
+        await ledger.recordCommission(
+          {
             orderId: order.id,
             storeId: order.storeId,
-            type: LedgerEntryType.COMMISSION,
             amountCents: commissionCents,
             note: `Auto-released: Qeto platform commission (${order.store.commissionBps / 100}%)`,
           },
-        });
+          tx as any
+        );
 
-        // 4. Record the merchant's net funds as available for payout
-        await tx.commissionLedger.create({
-          data: {
+        // 3. Record merchant's net funds as released for withdrawal
+        await ledger.recordReleased(
+          {
             orderId: order.id,
             storeId: order.storeId,
-            type: LedgerEntryType.RELEASED,
             amountCents: merchantNetCents,
-            note: `Auto-released: Merchant net funds available after buyer protection window expired`,
+            note: "Auto-released: Merchant net funds available after buyer protection window expired",
           },
-        });
+          tx as any
+        );
 
-        // 5. Move the order to RELEASED — escrow lifecycle complete
+        // 4. Move the order to RELEASED — escrow lifecycle complete
         await tx.order.update({
           where: { id: order.id },
           data: { status: OrderStatus.RELEASED },
@@ -185,15 +184,15 @@ export async function timeoutShipDeadlines(): Promise<void> {
         }
 
         // 2. Record the refund in the ledger for audit trail
-        await tx.commissionLedger.create({
-          data: {
+        await ledger.recordRefunded(
+          {
             orderId: order.id,
             storeId: order.storeId,
-            type: LedgerEntryType.REFUNDED,
             amountCents: order.totalCents,
-            note: `Auto-refunded: Seller missed 3-day shipping deadline. Full refund issued to buyer.`,
+            note: "Auto-refunded: Seller missed 3-day shipping deadline. Full refund issued to buyer.",
           },
-        });
+          tx as any
+        );
 
         // 3. Mark order as REFUNDED — escrow released back to buyer
         await tx.order.update({
@@ -264,3 +263,4 @@ async function runAllSweeps(): Promise<void> {
     console.error("[EscrowWorker] timeoutShipDeadlines crashed:", err.message);
   }
 }
+

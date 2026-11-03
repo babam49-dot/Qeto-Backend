@@ -6,35 +6,23 @@ import { requireAuth, AuthRequest } from "../middleware/requireAuth.js";
 import { normalizePhone } from "../lib/auth.js";
 import { OrderStatus, LedgerEntryType } from "../generated/enums.js";
 import { getParam } from "../lib/params.js";
+import {
+  hashDeliveryCode,
+  generateDeliveryCode,
+  findDeliveryCodeFromHash,
+  generateOrderToken,
+} from "../lib/deliveryCode.js";
+import { centsToETB, calculateCommission } from "../lib/money.js";
+import { ledger } from "../lib/ledger.js";
+
+export {
+  hashDeliveryCode,
+  generateDeliveryCode,
+  findDeliveryCodeFromHash,
+  generateOrderToken,
+};
 
 export const ordersRouter = Router();
-
-// Helper to hash 4-digit delivery code using SHA-256
-export function hashDeliveryCode(code: string): string {
-  return crypto.createHash("sha256").update(code.trim()).digest("hex");
-}
-
-// Helper to generate a random 4-digit delivery code (1000-9999)
-export function generateDeliveryCode(): string {
-  return Math.floor(1000 + Math.random() * 9000).toString();
-}
-
-// Helper to resolve 4-digit delivery code from its SHA-256 hash for verified buyer tracking
-export function findDeliveryCodeFromHash(hash: string | null): string | null {
-  if (!hash) return null;
-  for (let i = 1000; i <= 9999; i++) {
-    const candidate = i.toString();
-    if (crypto.createHash("sha256").update(candidate).digest("hex") === hash) {
-      return candidate;
-    }
-  }
-  return null;
-}
-
-// Helper to generate unguessable public order token
-export function generateOrderToken(): string {
-  return crypto.randomBytes(20).toString("hex");
-}
 
 // -------------------------------------------------------------
 // Validation Schemas
@@ -210,16 +198,16 @@ ordersRouter.post("/", async (req: Request, res: Response) => {
 
       // 4. If COD: record commission owed in ledger
       if (paymentMethod === "COD") {
-        const commissionAmount = Math.round((totalCents * store.commissionBps) / 10000);
-        await tx.commissionLedger.create({
-          data: {
+        const { commissionCents } = calculateCommission(totalCents, store.commissionBps);
+        await ledger.recordCodCommissionOwed(
+          {
             orderId: newOrder.id,
             storeId: store.id,
-            type: LedgerEntryType.COD_COMMISSION_OWED,
-            amountCents: commissionAmount,
-            note: `COD order commission owed (${store.commissionBps / 100}% of ${(totalCents / 100).toFixed(2)} ETB)`,
+            amountCents: commissionCents,
+            note: `COD order commission owed (${store.commissionBps / 100}% of ${centsToETB(totalCents)} ETB)`,
           },
-        });
+          tx as any
+        );
       }
 
       return newOrder;
@@ -861,15 +849,15 @@ ordersRouter.post("/:id/cancel", requireAuth, async (req: AuthRequest, res: Resp
 
       // 2. If escrow money was held, transition to REFUNDED and write to ledger
       if (order.status === OrderStatus.PAID_HELD) {
-        await tx.commissionLedger.create({
-          data: {
+        await ledger.recordRefunded(
+          {
             orderId: order.id,
             storeId: order.storeId,
-            type: LedgerEntryType.REFUNDED,
             amountCents: order.totalCents,
             note: "Order cancelled before dispatch - full refund issued to buyer",
           },
-        });
+          tx as any
+        );
 
         return tx.order.update({
           where: { id: order.id },
@@ -944,31 +932,33 @@ ordersRouter.post("/:id/release-funds", requireAuth, async (req: AuthRequest, re
     }
 
     const releasedOrder = await prisma.$transaction(async (tx) => {
-      // Calculate commission and merchant net
-      const commissionCents = Math.round((order.totalCents * order.store.commissionBps) / 10000);
-      const merchantNetCents = order.totalCents - commissionCents;
+      // Calculate commission and merchant net using shared money utility
+      const { commissionCents, merchantNetCents } = calculateCommission(
+        order.totalCents,
+        order.store.commissionBps
+      );
 
       // Append COMMISSION entry
-      await tx.commissionLedger.create({
-        data: {
+      await ledger.recordCommission(
+        {
           orderId: order.id,
           storeId: order.storeId,
-          type: LedgerEntryType.COMMISSION,
           amountCents: commissionCents,
           note: `Qeto platform commission (${order.store.commissionBps / 100}%)`,
         },
-      });
+        tx as any
+      );
 
       // Append RELEASED entry
-      await tx.commissionLedger.create({
-        data: {
+      await ledger.recordReleased(
+        {
           orderId: order.id,
           storeId: order.storeId,
-          type: LedgerEntryType.RELEASED,
           amountCents: merchantNetCents,
-          note: `Merchant net funds released for payout`,
+          note: "Merchant net funds released for payout",
         },
-      });
+        tx as any
+      );
 
       // Update status to RELEASED
       return tx.order.update({

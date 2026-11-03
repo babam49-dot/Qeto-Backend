@@ -7,8 +7,10 @@ import {
   verifyChapaTransaction,
   verifyChapaWebhookSignature,
 } from "../lib/chapa.js";
-import { OrderStatus, PaymentStatus, LedgerEntryType } from "../generated/enums.js";
+import { OrderStatus, PaymentStatus } from "../generated/enums.js";
 import { getParam } from "../lib/params.js";
+import { centsToETB } from "../lib/money.js";
+import { ledger } from "../lib/ledger.js";
 
 export const paymentsRouter = Router();
 
@@ -196,16 +198,16 @@ paymentsRouter.get("/verify/:txRef", async (req: Request, res: Response) => {
           },
         });
 
-        // 3. Append HELD entry to CommissionLedger
-        await tx.commissionLedger.create({
-          data: {
+        // 3. Append HELD entry to CommissionLedger via shared ledger helper
+        await ledger.recordHeld(
+          {
             orderId: order.id,
             storeId: order.storeId,
-            type: LedgerEntryType.HELD,
             amountCents: order.totalCents,
             note: `Payment verified via Chapa (tx_ref: ${txRef}). Funds held in escrow until delivery confirmation.`,
           },
-        });
+          tx as any
+        );
 
         return updatedOrder;
       });
@@ -336,15 +338,15 @@ paymentsRouter.post("/webhook", async (req: Request, res: Response) => {
             },
           });
 
-          await tx.commissionLedger.create({
-            data: {
+          await ledger.recordHeld(
+            {
               orderId: order.id,
               storeId: order.storeId,
-              type: LedgerEntryType.HELD,
               amountCents: order.totalCents,
-              note: `Webhook verified via Chapa. Funds held in escrow until delivery.`,
+              note: "Webhook verified via Chapa. Funds held in escrow until delivery.",
             },
-          });
+            tx as any
+          );
 
           await tx.webhookEvent.update({
             where: { id: event.id },
@@ -420,15 +422,15 @@ paymentsRouter.post("/simulate-success", async (req: Request, res: Response) => 
         },
       });
 
-      await tx.commissionLedger.create({
-        data: {
+      await ledger.recordHeld(
+        {
           orderId: order.id,
           storeId: order.storeId,
-          type: LedgerEntryType.HELD,
           amountCents: order.totalCents,
-          note: `Simulated sandbox payment verified. Gross funds held safely in escrow.`,
+          note: "Simulated sandbox payment verified. Gross funds held safely in escrow.",
         },
-      });
+        tx as any
+      );
 
       return ord;
     });

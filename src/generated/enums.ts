@@ -80,3 +80,11 @@ export const DisputeDecision = {
 } as const
 
 export type DisputeDecision = (typeof DisputeDecision)[keyof typeof DisputeDecision]
+
+
+export const UserRole = {
+  MERCHANT: 'MERCHANT',
+  ADMIN: 'ADMIN'
+} as const
+
+export type UserRole = (typeof UserRole)[keyof typeof UserRole]

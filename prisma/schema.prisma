@@ -63,12 +63,18 @@ enum DisputeDecision {
   PARTIAL
 }
 
+enum UserRole {
+  MERCHANT
+  ADMIN
+}
+
 model User {
   id        String   @id @default(cuid())
   phone     String   @unique
   email     String?  @unique
   password  String
   name      String
+  role      UserRole @default(MERCHANT)
   createdAt DateTime @default(now())
   stores    Store[]
 }

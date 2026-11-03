@@ -4,8 +4,10 @@ import crypto from "node:crypto";
 import { prisma } from "../db.js";
 import { requireAuth, AuthRequest } from "../middleware/requireAuth.js";
 import { getEthiopianBanks, createChapaPayout } from "../lib/chapa.js";
-import { LedgerEntryType, PayoutStatus } from "../generated/enums.js";
+import { PayoutStatus } from "../generated/enums.js";
 import { getParam } from "../lib/params.js";
+import { centsToETB } from "../lib/money.js";
+import { ledger } from "../lib/ledger.js";
 
 export const payoutsRouter = Router();
 
@@ -178,61 +180,37 @@ payoutsRouter.get("/balance/:storeId", requireAuth, async (req: AuthRequest, res
       return;
     }
 
-    // Fetch all ledger entries for this store
-    const entries = await prisma.commissionLedger.findMany({
+    // Fetch calculated balance from append-only ledger
+    const balance = await ledger.getStoreBalance(storeId);
+
+    // Fetch 10 most recent ledger entries for this store
+    const recentEntries = await prisma.commissionLedger.findMany({
       where: { storeId },
       orderBy: { createdAt: "desc" },
+      take: 10,
     });
-
-    let heldCents = 0;
-    let releasedCents = 0;
-    let payoutsSentCents = 0;
-    let codCommissionOwedCents = 0;
-
-    for (const entry of entries) {
-      switch (entry.type) {
-        case LedgerEntryType.HELD:
-          heldCents += entry.amountCents;
-          break;
-        case LedgerEntryType.RELEASED:
-          releasedCents += entry.amountCents;
-          break;
-        case LedgerEntryType.PAYOUT_SENT:
-          payoutsSentCents += entry.amountCents;
-          break;
-        case LedgerEntryType.COD_COMMISSION_OWED:
-          codCommissionOwedCents += entry.amountCents;
-          break;
-        default:
-          break;
-      }
-    }
-
-    // Available funds = released net earnings minus already withdrawn payouts and unpaid COD commission
-    const grossAvailableCents = releasedCents - payoutsSentCents - codCommissionOwedCents;
-    const availableCents = Math.max(0, grossAvailableCents);
 
     res.json({
       balance: {
-        availableCents,
-        availableETB: (availableCents / 100).toFixed(2),
-        heldCents,
-        heldETB: (heldCents / 100).toFixed(2),
-        releasedCents,
-        releasedETB: (releasedCents / 100).toFixed(2),
-        payoutsSentCents,
-        payoutsSentETB: (payoutsSentCents / 100).toFixed(2),
-        codCommissionOwedCents,
-        codCommissionOwedETB: (codCommissionOwedCents / 100).toFixed(2),
+        availableCents: balance.availableCents,
+        availableETB: centsToETB(balance.availableCents),
+        heldCents: balance.heldCents,
+        heldETB: centsToETB(balance.heldCents),
+        releasedCents: balance.releasedCents,
+        releasedETB: centsToETB(balance.releasedCents),
+        payoutsSentCents: balance.payoutsSentCents,
+        payoutsSentETB: centsToETB(balance.payoutsSentCents),
+        codCommissionOwedCents: balance.codCommissionOwedCents,
+        codCommissionOwedETB: centsToETB(balance.codCommissionOwedCents),
       },
       hasPayoutAccount: Boolean(store.payoutAccount),
       payoutAccount: store.payoutAccount,
-      recentEntries: entries.slice(0, 10).map((e) => ({
+      recentEntries: recentEntries.map((e) => ({
         id: e.id,
         orderId: e.orderId,
         type: e.type,
         amountCents: e.amountCents,
-        amountETB: (e.amountCents / 100).toFixed(2),
+        amountETB: centsToETB(e.amountCents),
         note: e.note,
         createdAt: e.createdAt,
       })),
@@ -287,22 +265,9 @@ payoutsRouter.post("/request", requireAuth, async (req: AuthRequest, res: Respon
       return;
     }
 
-    // Calculate current available balance
-    const entries = await prisma.commissionLedger.findMany({
-      where: { storeId },
-    });
-
-    let releasedCents = 0;
-    let payoutsSentCents = 0;
-    let codCommissionOwedCents = 0;
-
-    for (const entry of entries) {
-      if (entry.type === LedgerEntryType.RELEASED) releasedCents += entry.amountCents;
-      if (entry.type === LedgerEntryType.PAYOUT_SENT) payoutsSentCents += entry.amountCents;
-      if (entry.type === LedgerEntryType.COD_COMMISSION_OWED) codCommissionOwedCents += entry.amountCents;
-    }
-
-    const availableCents = Math.max(0, releasedCents - payoutsSentCents - codCommissionOwedCents);
+    // Calculate current available balance using ledger helper
+    const balance = await ledger.getStoreBalance(storeId);
+    const availableCents = balance.availableCents;
 
     // If amountETB is not specified, default to withdrawing the entire available balance
     const requestedCents = amountETB ? Math.round(amountETB * 100) : availableCents;
@@ -366,14 +331,14 @@ payoutsRouter.post("/request", requireAuth, async (req: AuthRequest, res: Respon
         });
 
         // Deduct from available balance in append-only ledger
-        await tx.commissionLedger.create({
-          data: {
+        await ledger.recordPayoutSent(
+          {
             storeId,
-            type: LedgerEntryType.PAYOUT_SENT,
             amountCents: requestedCents,
             note: `Payout transfer to ${store.payoutAccount?.bankName} (${store.payoutAccount?.accountNumber}). Ref: ${chapaResult.providerRef || idempotencyKey}`,
           },
-        });
+          tx as any
+        );
 
         return p;
       });
