@@ -69,7 +69,7 @@ export async function initializeChapaTransaction(
     env.CHAPA_SECRET_KEY.includes("demo-secret-key");
 
   if (isDemoKey && env.NODE_ENV !== "production") {
-    const mockCheckoutUrl = `${env.APP_URL}/api/payments/mock-checkout?tx_ref=${encodeURIComponent(
+    const mockCheckoutUrl = `${env.APP_URL}/checkout/mock?tx_ref=${encodeURIComponent(
       txRef
     )}&amount=${encodeURIComponent(formattedAmount)}&title=${encodeURIComponent(
       customization?.title || "Qeto Escrow Checkout"
@@ -129,7 +129,7 @@ export async function initializeChapaTransaction(
         `[Chapa] API response error (${response.status}):`,
         data?.message || "Using development simulator fallback."
       );
-      const mockCheckoutUrl = `${env.APP_URL}/api/payments/mock-checkout?tx_ref=${encodeURIComponent(
+      const mockCheckoutUrl = `${env.APP_URL}/checkout/mock?tx_ref=${encodeURIComponent(
         txRef
       )}&amount=${encodeURIComponent(formattedAmount)}&title=${encodeURIComponent(
         customization?.title || "Qeto Escrow Checkout"
@@ -148,7 +148,7 @@ export async function initializeChapaTransaction(
   } catch (error: any) {
     if (env.NODE_ENV !== "production") {
       console.warn("[Chapa] Network or API error:", error.message, "- using simulator fallback");
-      const mockCheckoutUrl = `${env.APP_URL}/api/payments/mock-checkout?tx_ref=${encodeURIComponent(
+      const mockCheckoutUrl = `${env.APP_URL}/checkout/mock?tx_ref=${encodeURIComponent(
         txRef
       )}&amount=${encodeURIComponent(formattedAmount)}&title=${encodeURIComponent(
         customization?.title || "Qeto Escrow Checkout"

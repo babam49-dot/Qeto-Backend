@@ -488,3 +488,4 @@ payoutsRouter.get("/history/:storeId", requireAuth, async (req: AuthRequest, res
     res.status(500).json({ error: "Internal server error" });
   }
 });
+
