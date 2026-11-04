@@ -8,6 +8,8 @@ import { productsRouter } from "./routes/products.js";
 import { ordersRouter } from "./routes/orders.js";
 import { paymentsRouter } from "./routes/payments.js";
 import { payoutsRouter } from "./routes/payouts.js";
+import { disputesRouter } from "./routes/disputes.js";
+import { adminRouter } from "./routes/admin.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 import { startEscrowWorker } from "./workers/escrow.js";
 
@@ -35,6 +37,8 @@ app.use("/api/products", productsRouter);
 app.use("/api/orders", ordersRouter);
 app.use("/api/payments", paymentsRouter);
 app.use("/api/payouts", payoutsRouter);
+app.use("/api/disputes", disputesRouter);
+app.use("/api/admin", adminRouter);
 
 // Centralized error handling middleware
 app.use(errorHandler);
