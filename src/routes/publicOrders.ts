@@ -123,12 +123,23 @@ publicOrdersRouter.post("/", async (req: Request, res: Response) => {
     // Atomically create order, create order items, and deduct/reserve variant inventory
     const order = await prisma.$transaction(
       async (tx) => {
-        // 1. Deduct stock for each variant
+        // 1. Deduct stock for each variant with atomic concurrency check
         for (const item of items) {
-          await tx.variant.update({
-            where: { id: item.variantId },
+          const updateResult = await tx.variant.updateMany({
+            where: {
+              id: item.variantId,
+              stock: { gte: item.quantity },
+            },
             data: { stock: { decrement: item.quantity } },
           });
+
+          if (updateResult.count === 0) {
+            const variant = variants.find((v) => v.id === item.variantId);
+            const variantName = variant ? `${variant.product.name} (${variant.label})` : "This item";
+            throw new Error(
+              `Insufficient stock for ${variantName}. Another buyer just purchased or reserved the last item.`
+            );
+          }
         }
 
         // 2. Create the order record
@@ -236,8 +247,12 @@ publicOrdersRouter.post("/", async (req: Request, res: Response) => {
         })),
       },
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Public create order error:", error);
+    if (error.message && error.message.includes("Insufficient stock")) {
+      res.status(409).json({ error: error.message });
+      return;
+    }
     res.status(500).json({ error: "Internal server error" });
   }
 });

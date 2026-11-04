@@ -81,3 +81,4 @@ Stock: 10 items`;
     assert.equal(result.confidence, "LOW");
   });
 });
+
