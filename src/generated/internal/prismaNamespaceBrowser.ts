@@ -51,6 +51,7 @@ export const AnyNull = runtime.objectEnumValues.instances.AnyNull
 export const ModelName = {
   User: 'User',
   Store: 'Store',
+  AgreementAcceptance: 'AgreementAcceptance',
   Category: 'Category',
   Product: 'Product',
   Variant: 'Variant',
@@ -109,6 +110,19 @@ export const StoreScalarFieldEnum = {
 } as const
 
 export type StoreScalarFieldEnum = (typeof StoreScalarFieldEnum)[keyof typeof StoreScalarFieldEnum]
+
+
+export const AgreementAcceptanceScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  storeId: 'storeId',
+  version: 'version',
+  acceptedAt: 'acceptedAt',
+  ip: 'ip',
+  userAgent: 'userAgent'
+} as const
+
+export type AgreementAcceptanceScalarFieldEnum = (typeof AgreementAcceptanceScalarFieldEnum)[keyof typeof AgreementAcceptanceScalarFieldEnum]
 
 
 export const CategoryScalarFieldEnum = {

@@ -392,6 +392,7 @@ type FieldRefInputType<Model, FieldType> = Model extends never ? never : FieldRe
 export const ModelName = {
   User: 'User',
   Store: 'Store',
+  AgreementAcceptance: 'AgreementAcceptance',
   Category: 'Category',
   Product: 'Product',
   Variant: 'Variant',
@@ -419,7 +420,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "user" | "store" | "category" | "product" | "variant" | "order" | "orderItem" | "payment" | "webhookEvent" | "commissionLedger" | "dispute" | "disputeEvidence" | "payoutAccount" | "payout"
+    modelProps: "user" | "store" | "agreementAcceptance" | "category" | "product" | "variant" | "order" | "orderItem" | "payment" | "webhookEvent" | "commissionLedger" | "dispute" | "disputeEvidence" | "payoutAccount" | "payout"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -568,6 +569,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         count: {
           args: Prisma.StoreCountArgs<ExtArgs>
           result: runtime.Types.Utils.Optional<Prisma.StoreCountAggregateOutputType> | number
+        }
+      }
+    }
+    AgreementAcceptance: {
+      payload: Prisma.$AgreementAcceptancePayload<ExtArgs>
+      fields: Prisma.AgreementAcceptanceFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.AgreementAcceptanceFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AgreementAcceptancePayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.AgreementAcceptanceFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AgreementAcceptancePayload>
+        }
+        findFirst: {
+          args: Prisma.AgreementAcceptanceFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AgreementAcceptancePayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.AgreementAcceptanceFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AgreementAcceptancePayload>
+        }
+        findMany: {
+          args: Prisma.AgreementAcceptanceFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AgreementAcceptancePayload>[]
+        }
+        create: {
+          args: Prisma.AgreementAcceptanceCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AgreementAcceptancePayload>
+        }
+        createMany: {
+          args: Prisma.AgreementAcceptanceCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.AgreementAcceptanceCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AgreementAcceptancePayload>[]
+        }
+        delete: {
+          args: Prisma.AgreementAcceptanceDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AgreementAcceptancePayload>
+        }
+        update: {
+          args: Prisma.AgreementAcceptanceUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AgreementAcceptancePayload>
+        }
+        deleteMany: {
+          args: Prisma.AgreementAcceptanceDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.AgreementAcceptanceUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.AgreementAcceptanceUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AgreementAcceptancePayload>[]
+        }
+        upsert: {
+          args: Prisma.AgreementAcceptanceUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AgreementAcceptancePayload>
+        }
+        aggregate: {
+          args: Prisma.AgreementAcceptanceAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateAgreementAcceptance>
+        }
+        groupBy: {
+          args: Prisma.AgreementAcceptanceGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AgreementAcceptanceGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.AgreementAcceptanceCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AgreementAcceptanceCountAggregateOutputType> | number
         }
       }
     }
@@ -1528,6 +1603,19 @@ export const StoreScalarFieldEnum = {
 export type StoreScalarFieldEnum = (typeof StoreScalarFieldEnum)[keyof typeof StoreScalarFieldEnum]
 
 
+export const AgreementAcceptanceScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  storeId: 'storeId',
+  version: 'version',
+  acceptedAt: 'acceptedAt',
+  ip: 'ip',
+  userAgent: 'userAgent'
+} as const
+
+export type AgreementAcceptanceScalarFieldEnum = (typeof AgreementAcceptanceScalarFieldEnum)[keyof typeof AgreementAcceptanceScalarFieldEnum]
+
+
 export const CategoryScalarFieldEnum = {
   id: 'id',
   storeId: 'storeId',
@@ -2023,6 +2111,7 @@ export interface PrismaClientOptions {
 export type GlobalOmitConfig = {
   user?: Prisma.UserOmit
   store?: Prisma.StoreOmit
+  agreementAcceptance?: Prisma.AgreementAcceptanceOmit
   category?: Prisma.CategoryOmit
   product?: Prisma.ProductOmit
   variant?: Prisma.VariantOmit

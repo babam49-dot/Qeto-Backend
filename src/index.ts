@@ -3,6 +3,7 @@ import express from "express";
 import cors from "cors";
 import { prisma } from "./db.js";
 import { authRouter } from "./routes/auth.js";
+import { agreementRouter } from "./routes/agreement.js";
 import { storesRouter } from "./routes/stores.js";
 import { categoriesRouter } from "./routes/categories.js";
 import { productsRouter } from "./routes/products.js";
@@ -34,6 +35,7 @@ app.get("/health", async (_req, res) => {
 });
 
 app.use("/api/auth", authRouter);
+app.use("/api/agreement", agreementRouter);
 app.use("/api/stores", storesRouter);
 app.use("/api/categories", categoriesRouter);
 app.use("/api/products", productsRouter);

@@ -379,3 +379,4 @@ categoriesRouter.post("/reorder", requireAuth, async (req: AuthRequest, res: Res
     res.status(500).json({ error: "Internal server error" });
   }
 });
+

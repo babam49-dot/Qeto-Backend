@@ -55,6 +55,11 @@ export type User = Prisma.UserModel
  */
 export type Store = Prisma.StoreModel
 /**
+ * Model AgreementAcceptance
+ * 
+ */
+export type AgreementAcceptance = Prisma.AgreementAcceptanceModel
+/**
  * Model Category
  * 
  */

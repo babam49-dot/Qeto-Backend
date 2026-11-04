@@ -47,6 +47,7 @@ const createStoreSchema = z.object({
   phone: z.string().min(9, "Phone number is required"),
   description: z.string().max(500).optional(),
   logoUrl: z.string().url("Invalid logo URL").optional().or(z.literal("")),
+  acceptTerms: z.boolean().optional(),
 });
 
 // Validation schema for updating a store (all fields optional)
@@ -70,7 +71,7 @@ storesRouter.post("/", requireAuth, async (req: AuthRequest, res: Response) => {
       return;
     }
 
-    const { name, slug: customSlug, phone: rawPhone, description, logoUrl } = parseResult.data;
+    const { name, slug: customSlug, phone: rawPhone, description, logoUrl, acceptTerms } = parseResult.data;
 
     // Normalize phone number
     const normalizedPhone = normalizePhone(rawPhone);
@@ -103,21 +104,51 @@ storesRouter.post("/", requireAuth, async (req: AuthRequest, res: Response) => {
       return;
     }
 
-    // Set 14-day trial period
+    // Set 7-day trial period per Product Design spec v1.0
     const trialEndsAt = new Date();
-    trialEndsAt.setDate(trialEndsAt.getDate() + 14);
+    trialEndsAt.setDate(trialEndsAt.getDate() + 7);
 
-    // Create the store
-    const store = await prisma.store.create({
-      data: {
-        name,
-        slug: finalSlug,
-        phone: normalizedPhone,
-        description: description || null,
-        logoUrl: logoUrl || null,
-        ownerId: req.userId!,
-        trialEndsAt,
-      },
+    // Client IP for agreement acceptance
+    const clientIp =
+      (typeof req.headers["x-forwarded-for"] === "string"
+        ? req.headers["x-forwarded-for"].split(",")[0].trim()
+        : req.ip) || req.socket.remoteAddress || null;
+    const userAgent = req.headers["user-agent"] || null;
+
+    // Create the store and optionally record agreement acceptance atomically
+    const store = await prisma.$transaction(async (tx) => {
+      const s = await tx.store.create({
+        data: {
+          name,
+          slug: finalSlug,
+          phone: normalizedPhone,
+          description: description || null,
+          logoUrl: logoUrl || null,
+          ownerId: req.userId!,
+          trialEndsAt,
+        },
+      });
+
+      if (acceptTerms) {
+        await tx.agreementAcceptance.upsert({
+          where: { storeId: s.id },
+          create: {
+            userId: req.userId!,
+            storeId: s.id,
+            version: "v1.0",
+            ip: clientIp,
+            userAgent,
+          },
+          update: {
+            version: "v1.0",
+            acceptedAt: new Date(),
+            ip: clientIp,
+            userAgent,
+          },
+        });
+      }
+
+      return s;
     });
 
     res.status(201).json({

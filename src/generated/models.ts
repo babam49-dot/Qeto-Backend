@@ -10,6 +10,7 @@
  */
 export type * from './models/User.js'
 export type * from './models/Store.js'
+export type * from './models/AgreementAcceptance.js'
 export type * from './models/Category.js'
 export type * from './models/Product.js'
 export type * from './models/Variant.js'

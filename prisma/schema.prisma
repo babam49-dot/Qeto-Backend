@@ -76,7 +76,8 @@ model User {
   name      String
   role      UserRole @default(MERCHANT)
   createdAt DateTime @default(now())
-  stores    Store[]
+  stores     Store[]
+  agreements AgreementAcceptance[]
 }
 
 model Store {
@@ -96,7 +97,22 @@ model Store {
   commissionBps Int            @default(300)
   payoutAccount PayoutAccount?
   payouts       Payout[]
+  agreement     AgreementAcceptance?
   createdAt     DateTime       @default(now())
+}
+
+model AgreementAcceptance {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  storeId    String?  @unique
+  store      Store?   @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  version    String   @default("v1.0")
+  acceptedAt DateTime @default(now())
+  ip         String?
+  userAgent  String?
+
+  @@index([userId])
 }
 
 model Category {
