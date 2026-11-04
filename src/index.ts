@@ -11,6 +11,7 @@ import { ordersRouter } from "./routes/orders.js";
 import { publicOrdersRouter } from "./routes/publicOrders.js";
 import { paymentsRouter } from "./routes/payments.js";
 import { payoutsRouter } from "./routes/payouts.js";
+import { moneyRouter } from "./routes/money.js";
 import { disputesRouter } from "./routes/disputes.js";
 import { adminRouter } from "./routes/admin.js";
 import { errorHandler } from "./middleware/errorHandler.js";
@@ -43,6 +44,7 @@ app.use("/api/public/orders", publicOrdersRouter);
 app.use("/api/orders", ordersRouter);
 app.use("/api/payments", paymentsRouter);
 app.use("/api/payouts", payoutsRouter);
+app.use("/api/money", moneyRouter);
 app.use("/api/disputes", disputesRouter);
 app.use("/api/admin", adminRouter);
 
