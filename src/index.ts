@@ -12,7 +12,7 @@ import { payoutsRouter } from "./routes/payouts.js";
 import { disputesRouter } from "./routes/disputes.js";
 import { adminRouter } from "./routes/admin.js";
 import { errorHandler } from "./middleware/errorHandler.js";
-import { startEscrowWorker } from "./workers/escrow.js";
+import { startAllJobs } from "./jobs/index.js";
 
 const app = express();
 app.use(cors());
@@ -48,7 +48,7 @@ app.use(errorHandler);
 const port = process.env.PORT || 4000;
 app.listen(port, () => {
   console.log(`Qeto API running on http://localhost:${port}`);
-  // Start background escrow worker — auto-releases funds, expires unpaid orders,
-  // and refunds buyers whose sellers missed the shipping deadline.
-  startEscrowWorker();
+  // Start all background cron jobs — escrow auto-release, reservation expiry,
+  // auto-refund, payout retry, ledger reconciliation, trial expiry.
+  startAllJobs();
 });
