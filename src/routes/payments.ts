@@ -10,6 +10,7 @@ import {
 import { OrderStatus, PaymentStatus } from "../generated/enums.js";
 import { getParam } from "../lib/params.js";
 import { ledger } from "../lib/ledger.js";
+import { assertCanTransition } from "../lib/stateMachine.js";
 
 export const paymentsRouter = Router();
 
@@ -177,6 +178,9 @@ paymentsRouter.get("/verify/:txRef", async (req: Request, res: Response) => {
     const verification = await verifyChapaTransaction(txRef);
 
     if (verification.status === "success") {
+      // Validate state machine transition (PENDING_PAYMENT -> PAID_HELD)
+      assertCanTransition(order.status, OrderStatus.PAID_HELD, order.id);
+
       // 3 days shipping deadline per design specification
       const shipDeadline = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000);
 

@@ -6,6 +6,7 @@ import { authRouter } from "./routes/auth.js";
 import { storesRouter } from "./routes/stores.js";
 import { productsRouter } from "./routes/products.js";
 import { ordersRouter } from "./routes/orders.js";
+import { publicOrdersRouter } from "./routes/publicOrders.js";
 import { paymentsRouter } from "./routes/payments.js";
 import { payoutsRouter } from "./routes/payouts.js";
 import { disputesRouter } from "./routes/disputes.js";
@@ -34,6 +35,7 @@ app.get("/health", async (_req, res) => {
 app.use("/api/auth", authRouter);
 app.use("/api/stores", storesRouter);
 app.use("/api/products", productsRouter);
+app.use("/api/public/orders", publicOrdersRouter);
 app.use("/api/orders", ordersRouter);
 app.use("/api/payments", paymentsRouter);
 app.use("/api/payouts", payoutsRouter);
