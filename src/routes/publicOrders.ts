@@ -1,5 +1,4 @@
 import { Router, Request, Response } from "express";
-import { z } from "zod";
 import { prisma } from "../db.js";
 import { OrderStatus } from "../generated/enums.js";
 import { getParam } from "../lib/params.js";
@@ -13,31 +12,12 @@ import { centsToETB } from "../lib/money.js";
 import { ledger } from "../lib/ledger.js";
 import { assertCanTransition, isDisputableStatus } from "../lib/stateMachine.js";
 import { sendMerchantOrderAlert } from "../lib/telegram.js";
+import {
+  createOrderSchema,
+  openDisputeSchema as disputeSchema,
+} from "../schemas/index.js";
 
 export const publicOrdersRouter = Router();
-
-// -------------------------------------------------------------
-// Validation Schemas
-// -------------------------------------------------------------
-const orderItemSchema = z.object({
-  variantId: z.string().min(1, "Variant ID is required"),
-  quantity: z.number().int().min(1, "Quantity must be at least 1"),
-});
-
-const createOrderSchema = z.object({
-  storeId: z.string().min(1, "Store ID is required"),
-  customerName: z.string().min(2, "Customer name must be at least 2 characters").max(100),
-  phone: z.string().min(9, "Phone number is required"),
-  address: z.string().min(3, "Delivery address is required").max(500),
-  paymentMethod: z.enum(["ONLINE", "COD"]).default("ONLINE"),
-  items: z.array(orderItemSchema).min(1, "Order must contain at least one item"),
-});
-
-const disputeSchema = z.object({
-  reason: z.string().min(5, "Dispute reason must be at least 5 characters").max(1000),
-  message: z.string().max(2000).optional(),
-  imageUrl: z.string().url("Invalid image URL").optional(),
-});
 
 // =============================================================
 // PUBLIC / BUYER ENDPOINTS

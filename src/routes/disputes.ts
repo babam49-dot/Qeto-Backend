@@ -1,25 +1,10 @@
 import { Router, Request, Response } from "express";
-import { z } from "zod";
 import { prisma } from "../db.js";
 import { OrderStatus, DisputeStatus } from "../generated/enums.js";
 import { getParam } from "../lib/params.js";
+import { openDisputeSchema, addEvidenceSchema } from "../schemas/index.js";
 
 export const disputesRouter = Router();
-
-// -------------------------------------------------------------
-// Validation Schemas
-// -------------------------------------------------------------
-const openDisputeSchema = z.object({
-  reason: z.string().min(5, "Dispute reason must be at least 5 characters").max(1000),
-  message: z.string().max(2000).optional(),
-  imageUrl: z.string().url("Invalid image URL").optional(),
-});
-
-const addEvidenceSchema = z.object({
-  author: z.enum(["BUYER", "MERCHANT"]).default("BUYER"),
-  message: z.string().min(2, "Evidence message must be at least 2 characters").max(2000),
-  imageUrl: z.string().url("Invalid image URL").optional(),
-});
 
 // =============================================================
 // PUBLIC / BUYER DISPUTE ENDPOINTS

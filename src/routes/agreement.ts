@@ -1,8 +1,8 @@
 import { Router, Request, Response } from "express";
-import { z } from "zod";
 import { prisma } from "../db.js";
 import { requireAuth, AuthRequest } from "../middleware/requireAuth.js";
 import { getParam } from "../lib/params.js";
+import { acceptAgreementSchema } from "../schemas/index.js";
 
 export const agreementRouter = Router();
 
@@ -49,14 +49,6 @@ export const CURRENT_TERMS = {
     },
   ],
 };
-
-// -------------------------------------------------------------
-// Validation Schemas
-// -------------------------------------------------------------
-const acceptAgreementSchema = z.object({
-  version: z.string().min(1, "Agreement version is required"),
-  storeId: z.string().optional(),
-});
 
 /**
  * Extracts the real client IP address from request headers or socket.

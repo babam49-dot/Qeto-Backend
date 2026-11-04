@@ -1,5 +1,4 @@
 import { Router, Response } from "express";
-import { z } from "zod";
 import { prisma } from "../db.js";
 import { requireAuth, AuthRequest } from "../middleware/requireAuth.js";
 import { requireAdmin } from "../middleware/requireAdmin.js";
@@ -8,28 +7,13 @@ import { getParam } from "../lib/params.js";
 import { calculateCommission, centsToETB } from "../lib/money.js";
 import { ledger } from "../lib/ledger.js";
 import { createChapaPayout } from "../lib/chapa.js";
+import { decideDisputeSchema, updateAdminStoreSchema } from "../schemas/index.js";
 
 export const adminRouter = Router();
 
 // Protect all admin endpoints with authentication and platform admin verification
 adminRouter.use(requireAuth);
 adminRouter.use(requireAdmin);
-
-// -------------------------------------------------------------
-// Validation Schemas
-// -------------------------------------------------------------
-const decideDisputeSchema = z.object({
-  decision: z.enum([DisputeDecision.REFUND, DisputeDecision.RELEASE, DisputeDecision.PARTIAL]),
-  refundCents: z.number().int().positive().optional(),
-  note: z.string().max(1000).optional(),
-});
-
-const updateAdminStoreSchema = z.object({
-  status: z.enum([StoreStatus.TRIAL, StoreStatus.ACTIVE, StoreStatus.SUSPENDED]).optional(),
-  commissionBps: z.number().int().min(0, "Commission cannot be negative").max(5000, "Commission cannot exceed 50%").optional(),
-  extendTrialDays: z.number().int().positive("Days to extend must be positive").optional(),
-  trialEndsAt: z.string().datetime().optional(),
-});
 
 // =============================================================
 // DISPUTES MANAGEMENT (ADMIN QUEUE)

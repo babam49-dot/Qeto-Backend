@@ -1,19 +1,11 @@
 import { Router, Request, Response } from "express";
-import { z } from "zod";
 import { Prisma } from "../generated/client.js";
 import { prisma } from "../db.js";
 import { hashPassword, checkPassword, signToken, normalizePhone } from "../lib/auth.js";
 import { requireAuth, AuthRequest } from "../middleware/requireAuth.js";
+import { registerSchema, loginSchema } from "../schemas/index.js";
 
 export const authRouter = Router();
-
-// 1. Validation schema for input data
-const registerSchema = z.object({
-  name: z.string().min(2, "Name must be at least 2 characters"),
-  phone: z.string().min(9, "Phone number is required"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
-  email: z.string().email("Invalid email address").optional().or(z.literal("")),
-});
 
 /**
  * POST /api/auth/register
@@ -111,11 +103,7 @@ authRouter.post("/register", async (req: Request, res: Response) => {
   }
 });
 
-// Validation schema for Login
-const loginSchema = z.object({
-  phone: z.string().min(1, "Phone number is required"),
-  password: z.string().min(1, "Password is required"),
-});
+// POST /api/auth/login
 
 /**
  * POST /api/auth/login

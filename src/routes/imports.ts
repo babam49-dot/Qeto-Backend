@@ -1,33 +1,14 @@
 import { Router, Response } from "express";
-import { z } from "zod";
 import { prisma } from "../db.js";
 import { requireAuth, AuthRequest } from "../middleware/requireAuth.js";
 import { getParam } from "../lib/params.js";
 import { ImportedPostStatus } from "../generated/enums.js";
+import { approveImportSchema } from "../schemas/index.js";
 
 export const importsRouter = Router();
 
 // Protect all imports inbox endpoints with merchant authentication
 importsRouter.use(requireAuth);
-
-const approveImportSchema = z.object({
-  name: z.string().min(1).max(120).optional(),
-  description: z.string().max(2000).optional(),
-  categoryId: z.string().nullable().optional(),
-  priceCents: z.number().int().positive().optional(),
-  variants: z
-    .array(
-      z.object({
-        label: z.string().min(1).max(50),
-        priceCents: z.number().int().positive(),
-        stock: z.number().int().min(0).default(1),
-      })
-    )
-    .min(1)
-    .optional(),
-  imageUrls: z.array(z.string().url()).optional(),
-  isPublished: z.boolean().optional().default(true),
-});
 
 /**
  * GET /api/imports/:storeId
@@ -241,3 +222,4 @@ importsRouter.post("/:id/reject", async (req: AuthRequest, res: Response) => {
     res.status(500).json({ error: "Internal server error" });
   }
 });
+

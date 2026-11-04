@@ -1,5 +1,4 @@
 import { Router, Response } from "express";
-import { z } from "zod";
 import crypto from "node:crypto";
 import { prisma } from "../db.js";
 import { requireAuth, AuthRequest } from "../middleware/requireAuth.js";
@@ -8,23 +7,9 @@ import { PayoutStatus } from "../generated/enums.js";
 import { getParam } from "../lib/params.js";
 import { centsToETB } from "../lib/money.js";
 import { ledger } from "../lib/ledger.js";
+import { payoutAccountSchema, requestPayoutSchema } from "../schemas/index.js";
 
 export const payoutsRouter = Router();
-
-// -------------------------------------------------------------
-// Validation Schemas
-// -------------------------------------------------------------
-const payoutAccountSchema = z.object({
-  bankCode: z.string().min(1, "Bank or wallet code is required"),
-  bankName: z.string().min(2, "Bank or wallet name is required"),
-  accountNumber: z.string().min(5, "Account or phone number must be at least 5 characters"),
-  accountName: z.string().min(2, "Account holder name is required").max(100),
-});
-
-const requestPayoutSchema = z.object({
-  storeId: z.string().min(1, "Store ID is required"),
-  amountETB: z.number().positive("Amount must be greater than 0").optional(),
-});
 
 // =============================================================
 // PAYOUT ROUTES

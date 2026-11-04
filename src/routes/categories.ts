@@ -1,36 +1,14 @@
 import { Router, Request, Response } from "express";
-import { z } from "zod";
 import { prisma } from "../db.js";
 import { requireAuth, AuthRequest } from "../middleware/requireAuth.js";
 import { getParam } from "../lib/params.js";
+import {
+  createCategorySchema,
+  updateCategorySchema,
+  reorderCategoriesSchema,
+} from "../schemas/index.js";
 
 export const categoriesRouter = Router();
-
-// -------------------------------------------------------------
-// Validation Schemas
-// -------------------------------------------------------------
-const createCategorySchema = z.object({
-  storeId: z.string().min(1, "Store ID is required"),
-  name: z.string().min(1, "Category name is required").max(60, "Category name is too long"),
-  keywords: z.array(z.string().trim().min(1)).optional().default([]),
-  sortOrder: z.number().int().optional().default(0),
-});
-
-const updateCategorySchema = z.object({
-  name: z.string().min(1).max(60).optional(),
-  keywords: z.array(z.string().trim().min(1)).optional(),
-  sortOrder: z.number().int().optional(),
-});
-
-const reorderCategoriesSchema = z.object({
-  storeId: z.string().min(1, "Store ID is required"),
-  items: z.array(
-    z.object({
-      id: z.string().min(1),
-      sortOrder: z.number().int(),
-    })
-  ).min(1, "At least one category order item is required"),
-});
 
 // =============================================================
 // PUBLIC ROUTES (Buyers & Storefront)

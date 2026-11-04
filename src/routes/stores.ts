@@ -1,10 +1,10 @@
 import { Router, Request, Response } from "express";
-import { z } from "zod";
 import { prisma } from "../db.js";
 import { Prisma } from "../generated/client.js";
 import { requireAuth, AuthRequest } from "../middleware/requireAuth.js";
 import { normalizePhone } from "../lib/auth.js";
 import { getParam } from "../lib/params.js";
+import { createStoreSchema, updateStoreSchema } from "../schemas/index.js";
 
 export const storesRouter = Router();
 
@@ -34,24 +34,6 @@ function slugify(text: string): string {
     .replace(/[^a-z0-9]+/g, "-") // Replace non-alphanumeric chars with hyphens
     .replace(/^-+|-+$/g, ""); // Strip leading & trailing hyphens
 }
-
-// Validation schema for creating a store
-const createStoreSchema = z.object({
-  name: z.string().min(2, "Store name must be at least 2 characters").max(100),
-  slug: z
-    .string()
-    .min(3, "Slug must be at least 3 characters")
-    .max(50)
-    .regex(/^[a-z0-9-]+$/, "Slug can only contain lowercase letters, numbers, and hyphens")
-    .optional(),
-  phone: z.string().min(9, "Phone number is required"),
-  description: z.string().max(500).optional(),
-  logoUrl: z.string().url("Invalid logo URL").optional().or(z.literal("")),
-  acceptTerms: z.boolean().optional(),
-});
-
-// Validation schema for updating a store (all fields optional)
-const updateStoreSchema = createStoreSchema.partial();
 
 /**
  * POST /api/stores

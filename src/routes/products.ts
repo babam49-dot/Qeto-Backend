@@ -1,31 +1,15 @@
 import { Router, Request, Response } from "express";
-import { z } from "zod";
 import { prisma } from "../db.js";
 import { requireAuth, AuthRequest } from "../middleware/requireAuth.js";
 import { verifyToken } from "../lib/auth.js";
 import { getParam } from "../lib/params.js";
+import {
+  createProductSchema,
+  updateProductSchema,
+  variantInputSchema,
+} from "../schemas/index.js";
 
 export const productsRouter = Router();
-
-// Validation schema for a single variant
-const variantInputSchema = z.object({
-  label: z.string().min(1, "Variant label is required (e.g., 'Default', 'M', 'Red')").max(50),
-  priceCents: z.number().int().min(0, "Price in cents must be a non-negative integer"),
-  stock: z.number().int().min(0, "Stock must be a non-negative integer"),
-});
-
-// Validation schema for creating a product with variants
-const createProductSchema = z.object({
-  storeId: z.string().min(1, "Store ID is required"),
-  categoryId: z.string().nullable().optional(),
-  name: z.string().min(2, "Product name must be at least 2 characters").max(120),
-  description: z.string().max(2000).optional(),
-  imageUrls: z.array(z.string().url("Invalid image URL")).max(10).optional().default([]),
-  isPublished: z.boolean().optional().default(true),
-  variants: z
-    .array(variantInputSchema)
-    .min(1, "Product must have at least one variant (e.g. Standard/Default)"),
-});
 
 /**
  * POST /api/products
@@ -208,26 +192,6 @@ productsRouter.get("/:id", async (req: Request, res: Response) => {
     console.error("Get product error:", error);
     res.status(500).json({ error: "Internal server error" });
   }
-});
-
-// Validation schema for updating a product
-const updateProductSchema = z.object({
-  categoryId: z.string().nullable().optional(),
-  name: z.string().min(2, "Product name must be at least 2 characters").max(120).optional(),
-  description: z.string().max(2000).optional(),
-  imageUrls: z.array(z.string().url("Invalid image URL")).max(10).optional(),
-  isPublished: z.boolean().optional(),
-  variants: z
-    .array(
-      z.object({
-        id: z.string().optional(),
-        label: z.string().min(1).max(50),
-        priceCents: z.number().int().min(0),
-        stock: z.number().int().min(0),
-      })
-    )
-    .min(1)
-    .optional(),
 });
 
 /**

@@ -1,5 +1,4 @@
 import { Router, Request, Response, NextFunction } from "express";
-import { z } from "zod";
 import { prisma } from "../db.js";
 import { requireAuth, AuthRequest } from "../middleware/requireAuth.js";
 import { OrderStatus } from "../generated/enums.js";
@@ -9,15 +8,9 @@ import { centsToETB, calculateCommission } from "../lib/money.js";
 import { ledger } from "../lib/ledger.js";
 import { assertCanTransition } from "../lib/stateMachine.js";
 import { publicOrdersRouter } from "./publicOrders.js";
+import { deliveryCodeSchema } from "../schemas/index.js";
 
 export const ordersRouter = Router();
-
-// -------------------------------------------------------------
-// Validation Schemas
-// -------------------------------------------------------------
-const deliveryCodeSchema = z.object({
-  deliveryCode: z.string().regex(/^\d{4}$/, "Delivery code must be exactly 4 digits"),
-});
 
 // =============================================================
 // BACKWARD COMPATIBILITY: PUBLIC / BUYER ROUTE DELEGATION

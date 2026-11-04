@@ -1,5 +1,4 @@
 import { Router, Request, Response } from "express";
-import { z } from "zod";
 import { prisma } from "../db.js";
 import { env } from "../env.js";
 import {
@@ -12,14 +11,9 @@ import { getParam } from "../lib/params.js";
 import { ledger } from "../lib/ledger.js";
 import { assertCanTransition } from "../lib/stateMachine.js";
 import { sendMerchantOrderAlert } from "../lib/telegram.js";
+import { initializePaymentSchema } from "../schemas/index.js";
 
 export const paymentsRouter = Router();
-
-const initializePaymentSchema = z.object({
-  orderToken: z.string().min(1, "Order token is required"),
-  email: z.string().email("Invalid email").optional(),
-  returnUrl: z.string().url("Invalid return URL").optional(),
-});
 
 /**
  * POST /api/payments/initialize

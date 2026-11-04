@@ -171,16 +171,16 @@ export async function sendMerchantOrderAlert(params: {
 }
 
 /**
- * Parses caption text from a Telegram channel post:
+ * Pure parsing function for caption text from a Telegram channel post:
  * - Detects Birr / ETB prices
  * - Detects sizes (shoe numbers 35-46 or apparel S-XXL)
  * - Detects stock quantities
- * - Matches category keywords from the store's categories
+ * - Matches category keywords from the provided categories
  */
-export async function parseTelegramPost(
+export function parseTelegramCaptionSync(
   caption: string,
-  storeId: string
-): Promise<ParsedProductData> {
+  storeCategories: Array<{ id: string; name: string; keywords: string[] }> = []
+): ParsedProductData {
   const lines = caption
     .split("\n")
     .map((l) => l.trim())
@@ -193,15 +193,21 @@ export async function parseTelegramPost(
   let priceCents: number | null = null;
   let priceETB: string | null = null;
 
+  // Must match either:
+  // (a) Price prefix + number (+ optional currency): e.g. "ዋጋ: 3,500" or "price: 2500 birr"
+  // (b) Number + currency suffix: e.g. "3,500 ብር" or "2500 ETB"
   const priceRegex =
-    /(?:price|ዋጋ|rate)?\s*[:=-]?\s*(\d{1,3}(?:,\d{3})+|\d+)\s*(?:etb|birr|ብር|br|\$)?/i;
+    /(?:(?:price|ዋጋ|rate)\s*[:=-]?\s*(\d{1,3}(?:,\d{3})+|\d+)\s*(?:etb|birr|ብር|br|\$)?|(\d{1,3}(?:,\d{3})+|\d+)\s*(?:etb|birr|ብር|br|\$))/i;
   const priceMatch = caption.match(priceRegex);
 
-  if (priceMatch && priceMatch[1]) {
-    const cleanNum = parseFloat(priceMatch[1].replace(/,/g, ""));
-    if (!isNaN(cleanNum) && cleanNum > 0) {
-      priceCents = Math.round(cleanNum * 100);
-      priceETB = cleanNum.toFixed(2);
+  if (priceMatch) {
+    const rawNum = priceMatch[1] || priceMatch[2];
+    if (rawNum) {
+      const cleanNum = parseFloat(rawNum.replace(/,/g, ""));
+      if (!isNaN(cleanNum) && cleanNum > 0) {
+        priceCents = Math.round(cleanNum * 100);
+        priceETB = cleanNum.toFixed(2);
+      }
     }
   }
 
@@ -220,21 +226,42 @@ export async function parseTelegramPost(
     }
   }
 
-  // Comma/space separated sizes
-  const shoeListMatch = caption.match(/\b(?:size|sizes|ልክ)?\s*[:=-]?\s*((?:[3-4][0-9][\s,/]+)+[3-4][0-9])/i);
-  if (shoeListMatch && sizes.length === 0) {
-    const extracted = shoeListMatch[1].match(/[3-4][0-9]/g);
-    if (extracted) {
-      sizes.push(...Array.from(new Set(extracted)));
+  // Check for line with size prefix: e.g. "Size: S M L XL" or "Size: 40, 41, 42"
+  const explicitSizeLine = caption.match(/(?:size|sizes|ልክ)\s*[:=-]?\s*([^\n\r]+)/i);
+  if (explicitSizeLine && sizes.length === 0) {
+    const lineText = explicitSizeLine[1];
+    // First try shoe sizes in that line
+    const shoeMatches = lineText.match(/[3-4][0-9]/g);
+    if (shoeMatches && shoeMatches.length > 0) {
+      sizes.push(...Array.from(new Set(shoeMatches)));
+    } else {
+      // Try apparel sizes (S, M, L, XL, XXL)
+      const found = lineText.match(/\b(XXL|XL|XS|[SML])\b/gi);
+      if (found && found.length > 0) {
+        sizes.push(...Array.from(new Set(found.map((s) => s.toUpperCase()))));
+      }
     }
   }
 
-  // Clothing sizes (S, M, L, XL, XXL)
-  const clothingMatch = caption.match(/\b(?:size|sizes)?\s*[:=-]?\s*([SMLX\s,/]+)\b/i);
-  if (clothingMatch && sizes.length === 0) {
-    const found = clothingMatch[1].match(/\b(XXL|XL|XS|[SML])\b/gi);
-    if (found && found.length > 0) {
-      sizes.push(...Array.from(new Set(found.map((s) => s.toUpperCase()))));
+  // Comma/space separated shoe sizes without prefix
+  if (sizes.length === 0) {
+    const shoeListMatch = caption.match(/\b((?:[3-4][0-9][\s,/]+)+[3-4][0-9])\b/i);
+    if (shoeListMatch) {
+      const extracted = shoeListMatch[1].match(/[3-4][0-9]/g);
+      if (extracted && extracted.length > 1) {
+        sizes.push(...Array.from(new Set(extracted)));
+      }
+    }
+  }
+
+  // Clothing sizes with slash/comma (e.g. "S/M/L" or "S, M, L")
+  if (sizes.length === 0) {
+    const slashOrCommaMatch = caption.match(/\b((?:(?:XXL|XL|XS|[SML])\s*[/,]\s*)+(?:XXL|XL|XS|[SML]))\b/i);
+    if (slashOrCommaMatch) {
+      const found = slashOrCommaMatch[1].match(/\b(XXL|XL|XS|[SML])\b/gi);
+      if (found && found.length > 0) {
+        sizes.push(...Array.from(new Set(found.map((s) => s.toUpperCase()))));
+      }
     }
   }
 
@@ -257,35 +284,27 @@ export async function parseTelegramPost(
   let matchedCategoryId: string | null = null;
   let matchedCategoryName: string | null = null;
 
-  try {
-    const storeCategories = await prisma.category.findMany({
-      where: { storeId },
-    });
+  let bestScore = 0;
+  const lowerCaption = caption.toLowerCase();
 
-    let bestScore = 0;
-    const lowerCaption = caption.toLowerCase();
-
-    for (const cat of storeCategories) {
-      let score = 0;
-      // Match category name
-      if (lowerCaption.includes(cat.name.toLowerCase())) {
-        score += 3;
-      }
-      // Match keywords
-      for (const keyword of cat.keywords) {
-        if (lowerCaption.includes(keyword.toLowerCase())) {
-          score += 2;
-        }
-      }
-
-      if (score > bestScore) {
-        bestScore = score;
-        matchedCategoryId = cat.id;
-        matchedCategoryName = cat.name;
+  for (const cat of storeCategories) {
+    let score = 0;
+    // Match category name
+    if (lowerCaption.includes(cat.name.toLowerCase())) {
+      score += 3;
+    }
+    // Match keywords
+    for (const keyword of cat.keywords) {
+      if (lowerCaption.includes(keyword.toLowerCase())) {
+        score += 2;
       }
     }
-  } catch (err) {
-    console.error("[Telegram] Error matching category:", err);
+
+    if (score > bestScore) {
+      bestScore = score;
+      matchedCategoryId = cat.id;
+      matchedCategoryName = cat.name;
+    }
   }
 
   const confidence: "HIGH" | "MEDIUM" | "LOW" =
@@ -303,3 +322,27 @@ export async function parseTelegramPost(
     confidence,
   };
 }
+
+/**
+ * Parses caption text from a Telegram channel post and matches against store categories in DB.
+ */
+export async function parseTelegramPost(
+  caption: string,
+  storeId: string
+): Promise<ParsedProductData> {
+  let storeCategories: Array<{ id: string; name: string; keywords: string[] }> = [];
+
+  try {
+    if (storeId) {
+      storeCategories = await prisma.category.findMany({
+        where: { storeId },
+        select: { id: true, name: true, keywords: true },
+      });
+    }
+  } catch (err) {
+    console.error("[Telegram] Error fetching categories for parser:", err);
+  }
+
+  return parseTelegramCaptionSync(caption, storeCategories);
+}
+

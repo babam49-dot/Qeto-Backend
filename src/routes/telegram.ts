@@ -1,5 +1,4 @@
 import { Router, Request, Response } from "express";
-import { z } from "zod";
 import { prisma } from "../db.js";
 import { requireAuth, AuthRequest } from "../middleware/requireAuth.js";
 import { getParam } from "../lib/params.js";
@@ -8,24 +7,12 @@ import {
   parseTelegramPost,
 } from "../lib/telegram.js";
 import { ImportedPostStatus } from "../generated/enums.js";
+import {
+  connectChannelSchema,
+  updateTelegramSettingsSchema as updateSettingsSchema,
+} from "../schemas/index.js";
 
 export const telegramRouter = Router();
-
-// -------------------------------------------------------------
-// Validation Schemas
-// -------------------------------------------------------------
-const connectChannelSchema = z.object({
-  storeId: z.string().min(1, "Store ID is required"),
-  channelHandle: z.string().min(2, "Channel username or link is required"),
-  alertChatId: z.string().optional(),
-});
-
-const updateSettingsSchema = z.object({
-  autoImport: z.boolean().optional(),
-  autoPublish: z.boolean().optional(),
-  notifyOnOrder: z.boolean().optional(),
-  alertChatId: z.string().optional(),
-});
 
 // =============================================================
 // MERCHANT TELEGRAM SETTINGS
@@ -362,3 +349,4 @@ telegramRouter.post("/webhook", async (req: Request, res: Response) => {
     res.status(200).json({ ok: false, error: error.message });
   }
 });
+
