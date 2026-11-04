@@ -42,41 +42,44 @@ export async function autoReleaseEscrow(): Promise<void> {
 
   for (const order of eligibleOrders) {
     try {
-      await prisma.$transaction(async (tx) => {
-        // 1. Calculate commission and merchant net using shared money utility
-        const { commissionCents, merchantNetCents } = calculateCommission(
-          order.totalCents,
-          order.store.commissionBps
-        );
+      await prisma.$transaction(
+        async (tx) => {
+          // 1. Calculate commission and merchant net using shared money utility
+          const { commissionCents, merchantNetCents } = calculateCommission(
+            order.totalCents,
+            order.store.commissionBps
+          );
 
-        // 2. Record Qeto's platform commission in the append-only ledger
-        await ledger.recordCommission(
-          {
-            orderId: order.id,
-            storeId: order.storeId,
-            amountCents: commissionCents,
-            note: `Auto-released: Qeto platform commission (${order.store.commissionBps / 100}%)`,
-          },
-          tx
-        );
+          // 2. Record Qeto's platform commission in the append-only ledger
+          await ledger.recordCommission(
+            {
+              orderId: order.id,
+              storeId: order.storeId,
+              amountCents: commissionCents,
+              note: `Auto-released: Qeto platform commission (${order.store.commissionBps / 100}%)`,
+            },
+            tx
+          );
 
-        // 3. Record merchant's net funds as released for withdrawal
-        await ledger.recordReleased(
-          {
-            orderId: order.id,
-            storeId: order.storeId,
-            amountCents: merchantNetCents,
-            note: "Auto-released: Merchant net funds available after buyer protection window expired",
-          },
-          tx
-        );
+          // 3. Record merchant's net funds as released for withdrawal
+          await ledger.recordReleased(
+            {
+              orderId: order.id,
+              storeId: order.storeId,
+              amountCents: merchantNetCents,
+              note: "Auto-released: Merchant net funds available after buyer protection window expired",
+            },
+            tx
+          );
 
-        // 4. Move the order to RELEASED — escrow lifecycle complete
-        await tx.order.update({
-          where: { id: order.id },
-          data: { status: OrderStatus.RELEASED },
-        });
-      });
+          // 4. Move the order to RELEASED — escrow lifecycle complete
+          await tx.order.update({
+            where: { id: order.id },
+            data: { status: OrderStatus.RELEASED },
+          });
+        },
+        { timeout: 20000, maxWait: 10000 }
+      );
 
       console.log(
         `[EscrowWorker] ✓ Released order ${order.id} — merchant receives ${(
@@ -121,21 +124,18 @@ export async function expireUnpaidOrders(): Promise<void> {
 
   for (const order of expiredOrders) {
     try {
-      await prisma.$transaction(async (tx) => {
-        // 1. Restore stock for every item in the order back to the variant
-        for (const item of order.items) {
-          await tx.variant.update({
+      await prisma.$transaction([
+        ...order.items.map((item) =>
+          prisma.variant.update({
             where: { id: item.variantId },
-            data: { stock: { increment: item.quantity } }, // add back the reserved qty
-          });
-        }
-
-        // 2. Mark the order as EXPIRED
-        await tx.order.update({
+            data: { stock: { increment: item.quantity } },
+          })
+        ),
+        prisma.order.update({
           where: { id: order.id },
           data: { status: OrderStatus.EXPIRED },
-        });
-      });
+        }),
+      ]);
 
       console.log(`[EscrowWorker] ✓ Expired unpaid order ${order.id} — stock restored`);
     } catch (err: any) {
@@ -174,32 +174,35 @@ export async function timeoutShipDeadlines(): Promise<void> {
 
   for (const order of timedOutOrders) {
     try {
-      await prisma.$transaction(async (tx) => {
-        // 1. Restore stock for all ordered items
-        for (const item of order.items) {
-          await tx.variant.update({
-            where: { id: item.variantId },
-            data: { stock: { increment: item.quantity } },
+      await prisma.$transaction(
+        async (tx) => {
+          // 1. Restore stock for all ordered items
+          for (const item of order.items) {
+            await tx.variant.update({
+              where: { id: item.variantId },
+              data: { stock: { increment: item.quantity } },
+            });
+          }
+
+          // 2. Record the refund in the ledger for audit trail
+          await ledger.recordRefunded(
+            {
+              orderId: order.id,
+              storeId: order.storeId,
+              amountCents: order.totalCents,
+              note: "Auto-refunded: Seller missed 3-day shipping deadline. Full refund issued to buyer.",
+            },
+            tx
+          );
+
+          // 3. Mark order as REFUNDED — escrow released back to buyer
+          await tx.order.update({
+            where: { id: order.id },
+            data: { status: OrderStatus.REFUNDED },
           });
-        }
-
-        // 2. Record the refund in the ledger for audit trail
-        await ledger.recordRefunded(
-          {
-            orderId: order.id,
-            storeId: order.storeId,
-            amountCents: order.totalCents,
-            note: "Auto-refunded: Seller missed 3-day shipping deadline. Full refund issued to buyer.",
-          },
-          tx
-        );
-
-        // 3. Mark order as REFUNDED — escrow released back to buyer
-        await tx.order.update({
-          where: { id: order.id },
-          data: { status: OrderStatus.REFUNDED },
-        });
-      });
+        },
+        { timeout: 20000, maxWait: 10000 }
+      );
 
       console.log(
         `[EscrowWorker] ✓ Refunded order ${order.id} — seller missed shipping deadline`
@@ -227,8 +230,10 @@ const WORKER_INTERVAL_MS = 2 * 60 * 1000; // 2 minutes
  * Returns the interval handle so it can be cleared in tests or graceful shutdown.
  */
 export function startEscrowWorker(): NodeJS.Timeout {
-  // Run immediately on server boot to catch anything missed during downtime
-  runAllSweeps();
+  // Wait 3 seconds after server startup before running the first sweep to avoid boot contention
+  setTimeout(() => {
+    runAllSweeps();
+  }, 3000);
 
   // Then schedule recurring runs
   const handle = setInterval(runAllSweeps, WORKER_INTERVAL_MS);
