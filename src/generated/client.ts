@@ -55,6 +55,11 @@ export type User = Prisma.UserModel
  */
 export type Store = Prisma.StoreModel
 /**
+ * Model Category
+ * 
+ */
+export type Category = Prisma.CategoryModel
+/**
  * Model Product
  * 
  */

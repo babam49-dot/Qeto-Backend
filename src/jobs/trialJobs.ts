@@ -64,3 +64,4 @@ export function startTrialJobsJob(): void {
 
   console.log("[Job:trialJobs] Scheduled — runs daily at 00:30 EAT");
 }
+

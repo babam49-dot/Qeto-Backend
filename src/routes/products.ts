@@ -17,6 +17,7 @@ const variantInputSchema = z.object({
 // Validation schema for creating a product with variants
 const createProductSchema = z.object({
   storeId: z.string().min(1, "Store ID is required"),
+  categoryId: z.string().nullable().optional(),
   name: z.string().min(2, "Product name must be at least 2 characters").max(120),
   description: z.string().max(2000).optional(),
   imageUrls: z.array(z.string().url("Invalid image URL")).max(10).optional().default([]),
@@ -43,7 +44,7 @@ productsRouter.post("/", requireAuth, async (req: AuthRequest, res: Response) =>
       return;
     }
 
-    const { storeId, name, description, imageUrls, isPublished, variants } = parseResult.data;
+    const { storeId, categoryId, name, description, imageUrls, isPublished, variants } = parseResult.data;
 
     // Check if the store exists and verify seller ownership
     const store = await prisma.store.findUnique({
@@ -60,10 +61,23 @@ productsRouter.post("/", requireAuth, async (req: AuthRequest, res: Response) =>
       return;
     }
 
+    // Verify category if provided
+    if (categoryId) {
+      const category = await prisma.category.findUnique({
+        where: { id: categoryId },
+        select: { storeId: true },
+      });
+      if (!category || category.storeId !== storeId) {
+        res.status(400).json({ error: "Invalid category ID for this store" });
+        return;
+      }
+    }
+
     // Create the product and its variants atomically
     const product = await prisma.product.create({
       data: {
         storeId,
+        categoryId: categoryId || null,
         name,
         description: description || null,
         imageUrls,
@@ -78,6 +92,7 @@ productsRouter.post("/", requireAuth, async (req: AuthRequest, res: Response) =>
       },
       include: {
         variants: true,
+        category: { select: { id: true, name: true } },
       },
     });
 
@@ -131,14 +146,18 @@ productsRouter.get("/store/:storeId", async (req: Request, res: Response) => {
       }
     }
 
+    const categoryId = req.query.categoryId as string | undefined;
+
     const products = await prisma.product.findMany({
       where: {
         storeId,
+        ...(categoryId ? { categoryId } : {}),
         ...(isOwner ? {} : { isPublished: true }),
       },
       orderBy: { createdAt: "desc" },
       include: {
         variants: true,
+        category: { select: { id: true, name: true } },
       },
     });
 
@@ -166,6 +185,7 @@ productsRouter.get("/:id", async (req: Request, res: Response) => {
       where: { id: productId },
       include: {
         variants: true,
+        category: { select: { id: true, name: true } },
         store: {
           select: {
             id: true,
@@ -192,6 +212,7 @@ productsRouter.get("/:id", async (req: Request, res: Response) => {
 
 // Validation schema for updating a product
 const updateProductSchema = z.object({
+  categoryId: z.string().nullable().optional(),
   name: z.string().min(2, "Product name must be at least 2 characters").max(120).optional(),
   description: z.string().max(2000).optional(),
   imageUrls: z.array(z.string().url("Invalid image URL")).max(10).optional(),
@@ -248,7 +269,19 @@ productsRouter.patch("/:id", requireAuth, async (req: AuthRequest, res: Response
       return;
     }
 
-    const { name, description, imageUrls, isPublished, variants } = parseResult.data;
+    const { categoryId, name, description, imageUrls, isPublished, variants } = parseResult.data;
+
+    // Verify category if provided
+    if (categoryId !== undefined && categoryId !== null) {
+      const category = await prisma.category.findUnique({
+        where: { id: categoryId },
+        select: { storeId: true },
+      });
+      if (!category || category.storeId !== existing.storeId) {
+        res.status(400).json({ error: "Invalid category ID for this store" });
+        return;
+      }
+    }
 
     // Perform updates
     await prisma.$transaction(async (tx) => {
@@ -256,6 +289,7 @@ productsRouter.patch("/:id", requireAuth, async (req: AuthRequest, res: Response
       await tx.product.update({
         where: { id: productId },
         data: {
+          ...(categoryId !== undefined && { categoryId }),
           ...(name !== undefined && { name }),
           ...(description !== undefined && { description: description || null }),
           ...(imageUrls !== undefined && { imageUrls }),
@@ -291,7 +325,10 @@ productsRouter.patch("/:id", requireAuth, async (req: AuthRequest, res: Response
 
     const updatedProduct = await prisma.product.findUnique({
       where: { id: productId },
-      include: { variants: true },
+      include: {
+        variants: true,
+        category: { select: { id: true, name: true } },
+      },
     });
 
     res.json({

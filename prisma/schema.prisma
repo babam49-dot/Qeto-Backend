@@ -89,6 +89,7 @@ model Store {
   ownerId       String
   owner         User        @relation(fields: [ownerId], references: [id])
   products      Product[]
+  categories    Category[]
   orders        Order[]
   status        StoreStatus    @default(TRIAL)
   trialEndsAt   DateTime       @default(now())
@@ -98,10 +99,27 @@ model Store {
   createdAt     DateTime       @default(now())
 }
 
+model Category {
+  id        String    @id @default(cuid())
+  storeId   String
+  store     Store     @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  name      String
+  keywords  String[]  @default([])
+  sortOrder Int       @default(0)
+  products  Product[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@unique([storeId, name])
+  @@index([storeId, sortOrder])
+}
+
 model Product {
   id          String    @id @default(cuid())
   storeId     String
   store       Store     @relation(fields: [storeId], references: [id])
+  categoryId  String?
+  category    Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   name        String
   description String?
   imageUrls   String[]
@@ -110,6 +128,7 @@ model Product {
   createdAt   DateTime  @default(now())
 
   @@index([storeId, isPublished])
+  @@index([storeId, categoryId, isPublished])
 }
 
 model Variant {

@@ -180,6 +180,8 @@ storesRouter.get("/:slug", async (req: Request, res: Response) => {
       return;
     }
 
+    const categoryFilter = req.query.category as string | undefined;
+
     const store = await prisma.store.findUnique({
       where: { slug },
       select: {
@@ -191,10 +193,29 @@ storesRouter.get("/:slug", async (req: Request, res: Response) => {
         phone: true,
         status: true,
         createdAt: true,
-        products: {
-          where: { isPublished: true },
+        categories: {
+          orderBy: { sortOrder: "asc" },
           select: {
             id: true,
+            name: true,
+            keywords: true,
+            sortOrder: true,
+            _count: {
+              select: {
+                products: { where: { isPublished: true } },
+              },
+            },
+          },
+        },
+        products: {
+          where: {
+            isPublished: true,
+            ...(categoryFilter ? { categoryId: categoryFilter } : {}),
+          },
+          select: {
+            id: true,
+            categoryId: true,
+            category: { select: { id: true, name: true } },
             name: true,
             description: true,
             imageUrls: true,
@@ -222,7 +243,21 @@ storesRouter.get("/:slug", async (req: Request, res: Response) => {
       return;
     }
 
-    res.json({ store });
+    // Format response so categories include productCount
+    const formattedCategories = store.categories.map((c) => ({
+      id: c.id,
+      name: c.name,
+      keywords: c.keywords,
+      sortOrder: c.sortOrder,
+      productCount: c._count.products,
+    }));
+
+    res.json({
+      store: {
+        ...store,
+        categories: formattedCategories,
+      },
+    });
   } catch (error) {
     console.error("Get store by slug error:", error);
     res.status(500).json({ error: "Internal server error" });

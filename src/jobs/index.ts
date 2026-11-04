@@ -36,3 +36,4 @@ export function startAllJobs(): void {
 
   console.log("[Jobs] All background jobs registered ✓");
 }
+
