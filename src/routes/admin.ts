@@ -3,7 +3,7 @@ import { z } from "zod";
 import { prisma } from "../db.js";
 import { requireAuth, AuthRequest } from "../middleware/requireAuth.js";
 import { requireAdmin } from "../middleware/requireAdmin.js";
-import { OrderStatus, DisputeStatus, DisputeDecision, PayoutStatus, LedgerEntryType } from "../generated/enums.js";
+import { OrderStatus, DisputeStatus, DisputeDecision, PayoutStatus, LedgerEntryType, StoreStatus } from "../generated/enums.js";
 import { getParam } from "../lib/params.js";
 import { calculateCommission, centsToETB } from "../lib/money.js";
 import { ledger } from "../lib/ledger.js";
@@ -22,6 +22,13 @@ const decideDisputeSchema = z.object({
   decision: z.enum([DisputeDecision.REFUND, DisputeDecision.RELEASE, DisputeDecision.PARTIAL]),
   refundCents: z.number().int().positive().optional(),
   note: z.string().max(1000).optional(),
+});
+
+const updateAdminStoreSchema = z.object({
+  status: z.enum([StoreStatus.TRIAL, StoreStatus.ACTIVE, StoreStatus.SUSPENDED]).optional(),
+  commissionBps: z.number().int().min(0, "Commission cannot be negative").max(5000, "Commission cannot exceed 50%").optional(),
+  extendTrialDays: z.number().int().positive("Days to extend must be positive").optional(),
+  trialEndsAt: z.string().datetime().optional(),
 });
 
 // =============================================================
@@ -641,6 +648,362 @@ adminRouter.post("/payouts/:id/retry", async (req: AuthRequest, res: Response) =
     });
   } catch (error) {
     console.error("Admin retry payout error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// =============================================================
+// PLATFORM OVERVIEW (DASHBOARD HEADER)
+// =============================================================
+
+/**
+ * GET /api/admin/overview
+ * Returns executive high-level metrics for the platform owner:
+ * - Sales through Qeto (gross ETB)
+ * - Platform commission earned (ETB)
+ * - Active stores count
+ * - Trials ending in the next 48 hours
+ * - Open disputes count
+ */
+adminRouter.get("/overview", async (_req: AuthRequest, res: Response) => {
+  try {
+    const now = new Date();
+    const inTwoDays = new Date(now.getTime() + 48 * 60 * 60 * 1000);
+
+    const [
+      totalSalesAgg,
+      totalCommissionAgg,
+      activeStoresCount,
+      trialsEndingCount,
+      totalStoresCount,
+      openDisputesCount,
+      pendingPayoutsCount,
+    ] = await Promise.all([
+      prisma.order.aggregate({
+        _sum: { totalCents: true },
+        where: {
+          status: {
+            in: [OrderStatus.PAID_HELD, OrderStatus.SHIPPED, OrderStatus.DELIVERED, OrderStatus.RELEASED],
+          },
+        },
+      }),
+      prisma.commissionLedger.aggregate({
+        _sum: { amountCents: true },
+        where: { type: LedgerEntryType.COMMISSION },
+      }),
+      prisma.store.count({ where: { status: StoreStatus.ACTIVE } }),
+      prisma.store.count({
+        where: {
+          status: StoreStatus.TRIAL,
+          trialEndsAt: { gte: now, lte: inTwoDays },
+        },
+      }),
+      prisma.store.count(),
+      prisma.dispute.count({ where: { status: DisputeStatus.OPEN } }),
+      prisma.payout.count({ where: { status: PayoutStatus.PENDING } }),
+    ]);
+
+    const totalSalesCents = totalSalesAgg._sum.totalCents || 0;
+    const totalCommissionCents = totalCommissionAgg._sum.amountCents || 0;
+
+    res.json({
+      metrics: {
+        totalSalesCents,
+        totalSalesETB: centsToETB(totalSalesCents),
+        totalCommissionCents,
+        totalCommissionETB: centsToETB(totalCommissionCents),
+        activeStoresCount,
+        trialsEndingCount,
+        totalStoresCount,
+        openDisputesCount,
+        pendingPayoutsCount,
+      },
+    });
+  } catch (error: any) {
+    console.error("Admin overview error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// =============================================================
+// STORE MANAGEMENT
+// =============================================================
+
+/**
+ * GET /api/admin/stores
+ * Lists all registered stores on Qeto with pagination, search, and status filtering.
+ */
+adminRouter.get("/stores", async (req: AuthRequest, res: Response) => {
+  try {
+    const statusParam = req.query.status as string | undefined;
+    const searchParam = req.query.search as string | undefined;
+    const pageNum = Math.max(1, parseInt(req.query.page as string) || 1);
+    const limitNum = Math.min(100, Math.max(1, parseInt(req.query.limit as string) || 20));
+    const skip = (pageNum - 1) * limitNum;
+
+    const where: any = {};
+    if (statusParam && Object.values(StoreStatus).includes(statusParam as StoreStatus)) {
+      where.status = statusParam as StoreStatus;
+    }
+    if (searchParam && searchParam.trim()) {
+      const term = searchParam.trim();
+      where.OR = [
+        { name: { contains: term, mode: "insensitive" } },
+        { slug: { contains: term, mode: "insensitive" } },
+        { phone: { contains: term, mode: "insensitive" } },
+        { owner: { phone: { contains: term, mode: "insensitive" } } },
+      ];
+    }
+
+    const now = new Date();
+
+    const [stores, totalCount] = await Promise.all([
+      prisma.store.findMany({
+        where,
+        skip,
+        take: limitNum,
+        orderBy: { createdAt: "desc" },
+        include: {
+          owner: {
+            select: { id: true, name: true, phone: true, email: true },
+          },
+          payoutAccount: {
+            select: { bankName: true, accountNumber: true },
+          },
+          agreement: {
+            select: { version: true, acceptedAt: true },
+          },
+          _count: {
+            select: { products: true, orders: true },
+          },
+        },
+      }),
+      prisma.store.count({ where }),
+    ]);
+
+    // Batch query gross sales for these stores
+    const storeIds = stores.map((s) => s.id);
+    const salesGroup = await prisma.order.groupBy({
+      by: ["storeId"],
+      _sum: { totalCents: true },
+      where: {
+        storeId: { in: storeIds },
+        status: {
+          in: [OrderStatus.PAID_HELD, OrderStatus.SHIPPED, OrderStatus.DELIVERED, OrderStatus.RELEASED],
+        },
+      },
+    });
+
+    const salesMap = new Map<string, number>();
+    for (const item of salesGroup) {
+      salesMap.set(item.storeId, item._sum.totalCents || 0);
+    }
+
+    res.json({
+      stores: stores.map((s) => {
+        const msRemaining = s.trialEndsAt.getTime() - now.getTime();
+        const daysLeft = Math.max(0, Math.ceil(msRemaining / (1000 * 60 * 60 * 24)));
+        const grossSalesCents = salesMap.get(s.id) || 0;
+
+        return {
+          id: s.id,
+          name: s.name,
+          slug: s.slug,
+          phone: s.phone,
+          status: s.status,
+          commissionBps: s.commissionBps,
+          commissionRateFormatted: `${(s.commissionBps / 100).toFixed(2)}%`,
+          trial: {
+            trialEndsAt: s.trialEndsAt,
+            daysLeft,
+            isExpired: s.trialEndsAt <= now,
+          },
+          owner: s.owner,
+          payoutAccount: s.payoutAccount,
+          hasAcceptedAgreement: Boolean(s.agreement),
+          productCount: s._count.products,
+          orderCount: s._count.orders,
+          grossSalesCents,
+          grossSalesETB: centsToETB(grossSalesCents),
+          createdAt: s.createdAt,
+        };
+      }),
+      pagination: {
+        page: pageNum,
+        limit: limitNum,
+        totalCount,
+        totalPages: Math.ceil(totalCount / limitNum),
+      },
+    });
+  } catch (error: any) {
+    console.error("Admin list stores error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+/**
+ * GET /api/admin/stores/:id
+ * Fetches detailed info and financial breakdown for a single store.
+ */
+adminRouter.get("/stores/:id", async (req: AuthRequest, res: Response) => {
+  try {
+    const storeId = getParam(req.params.id);
+    if (!storeId) {
+      res.status(400).json({ error: "Store ID is required" });
+      return;
+    }
+
+    const store = await prisma.store.findUnique({
+      where: { id: storeId },
+      include: {
+        owner: { select: { id: true, name: true, phone: true, email: true, createdAt: true } },
+        payoutAccount: true,
+        agreement: true,
+        _count: { select: { products: true, orders: true } },
+      },
+    });
+
+    if (!store) {
+      res.status(404).json({ error: "Store not found" });
+      return;
+    }
+
+    // Ledger balance calculation
+    const balance = await ledger.getStoreBalance(storeId);
+
+    // Recent 5 orders
+    const recentOrders = await prisma.order.findMany({
+      where: { storeId },
+      orderBy: { createdAt: "desc" },
+      take: 5,
+      select: {
+        id: true,
+        orderToken: true,
+        customerName: true,
+        phone: true,
+        totalCents: true,
+        status: true,
+        createdAt: true,
+      },
+    });
+
+    const now = new Date();
+    const daysLeft = Math.max(
+      0,
+      Math.ceil((store.trialEndsAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+    );
+
+    res.json({
+      store: {
+        id: store.id,
+        name: store.name,
+        slug: store.slug,
+        phone: store.phone,
+        status: store.status,
+        description: store.description,
+        logoUrl: store.logoUrl,
+        commissionBps: store.commissionBps,
+        commissionRateFormatted: `${(store.commissionBps / 100).toFixed(2)}%`,
+        trial: {
+          trialEndsAt: store.trialEndsAt,
+          daysLeft,
+          isExpired: store.trialEndsAt <= now,
+        },
+        owner: store.owner,
+        payoutAccount: store.payoutAccount,
+        agreement: store.agreement,
+        productCount: store._count.products,
+        orderCount: store._count.orders,
+        createdAt: store.createdAt,
+      },
+      balance: {
+        availableCents: balance.availableCents,
+        availableETB: centsToETB(balance.availableCents),
+        heldCents: balance.heldCents,
+        heldETB: centsToETB(balance.heldCents),
+        releasedCents: balance.releasedCents,
+        releasedETB: centsToETB(balance.releasedCents),
+        payoutsSentCents: balance.payoutsSentCents,
+        payoutsSentETB: centsToETB(balance.payoutsSentCents),
+        codCommissionOwedCents: balance.codCommissionOwedCents,
+        codCommissionOwedETB: centsToETB(balance.codCommissionOwedCents),
+      },
+      recentOrders: recentOrders.map((o) => ({
+        ...o,
+        totalETB: centsToETB(o.totalCents),
+      })),
+    });
+  } catch (error: any) {
+    console.error("Admin get store details error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+/**
+ * PATCH /api/admin/stores/:id
+ * Allows the platform owner to:
+ * - Extend trial days
+ * - Modify custom commission rate (commissionBps)
+ * - Change store status (ACTIVE, TRIAL, SUSPENDED)
+ */
+adminRouter.patch("/stores/:id", async (req: AuthRequest, res: Response) => {
+  try {
+    const storeId = getParam(req.params.id);
+    if (!storeId) {
+      res.status(400).json({ error: "Store ID is required" });
+      return;
+    }
+
+    const parseResult = updateAdminStoreSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      res.status(400).json({
+        error: "Validation failed",
+        details: parseResult.error.flatten().fieldErrors,
+      });
+      return;
+    }
+
+    const store = await prisma.store.findUnique({
+      where: { id: storeId },
+    });
+
+    if (!store) {
+      res.status(404).json({ error: "Store not found" });
+      return;
+    }
+
+    const { status, commissionBps, extendTrialDays, trialEndsAt } = parseResult.data;
+
+    let updatedTrialEndsAt: Date | undefined = undefined;
+    if (trialEndsAt) {
+      updatedTrialEndsAt = new Date(trialEndsAt);
+    } else if (extendTrialDays) {
+      const now = new Date();
+      const baseDate = store.trialEndsAt > now ? store.trialEndsAt : now;
+      updatedTrialEndsAt = new Date(baseDate.getTime() + extendTrialDays * 24 * 60 * 60 * 1000);
+    }
+
+    // Determine status: if extending trial and currently SUSPENDED, restore to TRIAL
+    let finalStatus = status;
+    if (updatedTrialEndsAt && updatedTrialEndsAt > new Date() && !status && store.status === StoreStatus.SUSPENDED) {
+      finalStatus = StoreStatus.TRIAL;
+    }
+
+    const updatedStore = await prisma.store.update({
+      where: { id: storeId },
+      data: {
+        ...(finalStatus !== undefined && { status: finalStatus }),
+        ...(commissionBps !== undefined && { commissionBps }),
+        ...(updatedTrialEndsAt !== undefined && { trialEndsAt: updatedTrialEndsAt }),
+      },
+    });
+
+    res.json({
+      message: "Store updated successfully by admin",
+      store: updatedStore,
+    });
+  } catch (error: any) {
+    console.error("Admin update store error:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 });

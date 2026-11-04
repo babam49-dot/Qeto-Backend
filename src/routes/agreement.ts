@@ -116,19 +116,19 @@ agreementRouter.get("/status", requireAuth, async (req: AuthRequest, res: Respon
       currentVersion: CURRENT_AGREEMENT_VERSION,
       userAcceptance: userAcceptance
         ? {
-            id: userAcceptance.id,
-            version: userAcceptance.version,
-            acceptedAt: userAcceptance.acceptedAt,
-            ip: userAcceptance.ip,
-          }
+          id: userAcceptance.id,
+          version: userAcceptance.version,
+          acceptedAt: userAcceptance.acceptedAt,
+          ip: userAcceptance.ip,
+        }
         : null,
       storeAcceptance: storeAcceptance
         ? {
-            id: storeAcceptance.id,
-            storeId: storeAcceptance.storeId,
-            version: storeAcceptance.version,
-            acceptedAt: storeAcceptance.acceptedAt,
-          }
+          id: storeAcceptance.id,
+          storeId: storeAcceptance.storeId,
+          version: storeAcceptance.version,
+          acceptedAt: storeAcceptance.acceptedAt,
+        }
         : null,
     });
   } catch (error: any) {
@@ -258,3 +258,4 @@ agreementRouter.get("/history", requireAuth, async (req: AuthRequest, res: Respo
     res.status(500).json({ error: "Internal server error" });
   }
 });
+
