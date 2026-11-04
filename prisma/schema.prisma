@@ -95,10 +95,12 @@ model Store {
   status        StoreStatus    @default(TRIAL)
   trialEndsAt   DateTime       @default(now())
   commissionBps Int            @default(300)
-  payoutAccount PayoutAccount?
-  payouts       Payout[]
-  agreement     AgreementAcceptance?
-  createdAt     DateTime       @default(now())
+  payoutAccount      PayoutAccount?
+  payouts            Payout[]
+  agreement          AgreementAcceptance?
+  telegramConnection TelegramConnection?
+  importedPosts      ImportedPost[]
+  createdAt          DateTime       @default(now())
 }
 
 model AgreementAcceptance {
@@ -113,6 +115,47 @@ model AgreementAcceptance {
   userAgent  String?
 
   @@index([userId])
+}
+
+model TelegramConnection {
+  id              String   @id @default(cuid())
+  storeId         String   @unique
+  store           Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  channelId       String   @unique
+  channelUsername String?
+  channelTitle    String
+  autoImport      Boolean  @default(true)
+  autoPublish     Boolean  @default(false)
+  notifyOnOrder   Boolean  @default(true)
+  alertChatId     String?
+  connectedAt     DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+enum ImportedPostStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model ImportedPost {
+  id           String             @id @default(cuid())
+  storeId      String
+  store        Store              @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  channelId    String
+  messageId    Int
+  mediaGroupId String?
+  rawCaption   String?
+  imageUrls    String[]           @default([])
+  parsedData   Json?
+  status       ImportedPostStatus @default(PENDING)
+  productId    String?            @unique
+  product      Product?           @relation(fields: [productId], references: [id], onDelete: SetNull)
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+
+  @@unique([channelId, messageId])
+  @@index([storeId, status])
 }
 
 model Category {
@@ -139,9 +182,10 @@ model Product {
   name        String
   description String?
   imageUrls   String[]
-  isPublished Boolean   @default(false)
-  variants    Variant[]
-  createdAt   DateTime  @default(now())
+  isPublished  Boolean       @default(false)
+  variants     Variant[]
+  importedPost ImportedPost?
+  createdAt    DateTime      @default(now())
 
   @@index([storeId, isPublished])
   @@index([storeId, categoryId, isPublished])

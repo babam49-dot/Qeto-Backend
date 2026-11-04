@@ -88,3 +88,12 @@ export const UserRole = {
 } as const
 
 export type UserRole = (typeof UserRole)[keyof typeof UserRole]
+
+
+export const ImportedPostStatus = {
+  PENDING: 'PENDING',
+  APPROVED: 'APPROVED',
+  REJECTED: 'REJECTED'
+} as const
+
+export type ImportedPostStatus = (typeof ImportedPostStatus)[keyof typeof ImportedPostStatus]

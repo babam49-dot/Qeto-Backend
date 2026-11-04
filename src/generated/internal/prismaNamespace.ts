@@ -393,6 +393,8 @@ export const ModelName = {
   User: 'User',
   Store: 'Store',
   AgreementAcceptance: 'AgreementAcceptance',
+  TelegramConnection: 'TelegramConnection',
+  ImportedPost: 'ImportedPost',
   Category: 'Category',
   Product: 'Product',
   Variant: 'Variant',
@@ -420,7 +422,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "user" | "store" | "agreementAcceptance" | "category" | "product" | "variant" | "order" | "orderItem" | "payment" | "webhookEvent" | "commissionLedger" | "dispute" | "disputeEvidence" | "payoutAccount" | "payout"
+    modelProps: "user" | "store" | "agreementAcceptance" | "telegramConnection" | "importedPost" | "category" | "product" | "variant" | "order" | "orderItem" | "payment" | "webhookEvent" | "commissionLedger" | "dispute" | "disputeEvidence" | "payoutAccount" | "payout"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -643,6 +645,154 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         count: {
           args: Prisma.AgreementAcceptanceCountArgs<ExtArgs>
           result: runtime.Types.Utils.Optional<Prisma.AgreementAcceptanceCountAggregateOutputType> | number
+        }
+      }
+    }
+    TelegramConnection: {
+      payload: Prisma.$TelegramConnectionPayload<ExtArgs>
+      fields: Prisma.TelegramConnectionFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.TelegramConnectionFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TelegramConnectionPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.TelegramConnectionFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TelegramConnectionPayload>
+        }
+        findFirst: {
+          args: Prisma.TelegramConnectionFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TelegramConnectionPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.TelegramConnectionFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TelegramConnectionPayload>
+        }
+        findMany: {
+          args: Prisma.TelegramConnectionFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TelegramConnectionPayload>[]
+        }
+        create: {
+          args: Prisma.TelegramConnectionCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TelegramConnectionPayload>
+        }
+        createMany: {
+          args: Prisma.TelegramConnectionCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.TelegramConnectionCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TelegramConnectionPayload>[]
+        }
+        delete: {
+          args: Prisma.TelegramConnectionDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TelegramConnectionPayload>
+        }
+        update: {
+          args: Prisma.TelegramConnectionUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TelegramConnectionPayload>
+        }
+        deleteMany: {
+          args: Prisma.TelegramConnectionDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.TelegramConnectionUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.TelegramConnectionUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TelegramConnectionPayload>[]
+        }
+        upsert: {
+          args: Prisma.TelegramConnectionUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TelegramConnectionPayload>
+        }
+        aggregate: {
+          args: Prisma.TelegramConnectionAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateTelegramConnection>
+        }
+        groupBy: {
+          args: Prisma.TelegramConnectionGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.TelegramConnectionGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.TelegramConnectionCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.TelegramConnectionCountAggregateOutputType> | number
+        }
+      }
+    }
+    ImportedPost: {
+      payload: Prisma.$ImportedPostPayload<ExtArgs>
+      fields: Prisma.ImportedPostFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.ImportedPostFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ImportedPostPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.ImportedPostFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ImportedPostPayload>
+        }
+        findFirst: {
+          args: Prisma.ImportedPostFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ImportedPostPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.ImportedPostFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ImportedPostPayload>
+        }
+        findMany: {
+          args: Prisma.ImportedPostFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ImportedPostPayload>[]
+        }
+        create: {
+          args: Prisma.ImportedPostCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ImportedPostPayload>
+        }
+        createMany: {
+          args: Prisma.ImportedPostCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.ImportedPostCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ImportedPostPayload>[]
+        }
+        delete: {
+          args: Prisma.ImportedPostDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ImportedPostPayload>
+        }
+        update: {
+          args: Prisma.ImportedPostUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ImportedPostPayload>
+        }
+        deleteMany: {
+          args: Prisma.ImportedPostDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.ImportedPostUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.ImportedPostUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ImportedPostPayload>[]
+        }
+        upsert: {
+          args: Prisma.ImportedPostUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ImportedPostPayload>
+        }
+        aggregate: {
+          args: Prisma.ImportedPostAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateImportedPost>
+        }
+        groupBy: {
+          args: Prisma.ImportedPostGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ImportedPostGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.ImportedPostCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ImportedPostCountAggregateOutputType> | number
         }
       }
     }
@@ -1616,6 +1766,41 @@ export const AgreementAcceptanceScalarFieldEnum = {
 export type AgreementAcceptanceScalarFieldEnum = (typeof AgreementAcceptanceScalarFieldEnum)[keyof typeof AgreementAcceptanceScalarFieldEnum]
 
 
+export const TelegramConnectionScalarFieldEnum = {
+  id: 'id',
+  storeId: 'storeId',
+  channelId: 'channelId',
+  channelUsername: 'channelUsername',
+  channelTitle: 'channelTitle',
+  autoImport: 'autoImport',
+  autoPublish: 'autoPublish',
+  notifyOnOrder: 'notifyOnOrder',
+  alertChatId: 'alertChatId',
+  connectedAt: 'connectedAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type TelegramConnectionScalarFieldEnum = (typeof TelegramConnectionScalarFieldEnum)[keyof typeof TelegramConnectionScalarFieldEnum]
+
+
+export const ImportedPostScalarFieldEnum = {
+  id: 'id',
+  storeId: 'storeId',
+  channelId: 'channelId',
+  messageId: 'messageId',
+  mediaGroupId: 'mediaGroupId',
+  rawCaption: 'rawCaption',
+  imageUrls: 'imageUrls',
+  parsedData: 'parsedData',
+  status: 'status',
+  productId: 'productId',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type ImportedPostScalarFieldEnum = (typeof ImportedPostScalarFieldEnum)[keyof typeof ImportedPostScalarFieldEnum]
+
+
 export const CategoryScalarFieldEnum = {
   id: 'id',
   storeId: 'storeId',
@@ -1796,6 +1981,14 @@ export const SortOrder = {
 export type SortOrder = (typeof SortOrder)[keyof typeof SortOrder]
 
 
+export const NullableJsonNullValueInput = {
+  DbNull: DbNull,
+  JsonNull: JsonNull
+} as const
+
+export type NullableJsonNullValueInput = (typeof NullableJsonNullValueInput)[keyof typeof NullableJsonNullValueInput]
+
+
 export const JsonNullValueInput = {
   JsonNull: JsonNull
 } as const
@@ -1912,6 +2105,34 @@ export type BooleanFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel,
 
 
 /**
+ * Reference to a field of type 'Json'
+ */
+export type JsonFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Json'>
+    
+
+
+/**
+ * Reference to a field of type 'QueryMode'
+ */
+export type EnumQueryModeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'QueryMode'>
+    
+
+
+/**
+ * Reference to a field of type 'ImportedPostStatus'
+ */
+export type EnumImportedPostStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'ImportedPostStatus'>
+    
+
+
+/**
+ * Reference to a field of type 'ImportedPostStatus[]'
+ */
+export type ListEnumImportedPostStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'ImportedPostStatus[]'>
+    
+
+
+/**
  * Reference to a field of type 'OrderStatus'
  */
 export type EnumOrderStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'OrderStatus'>
@@ -1936,20 +2157,6 @@ export type EnumPaymentStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$Pr
  * Reference to a field of type 'PaymentStatus[]'
  */
 export type ListEnumPaymentStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'PaymentStatus[]'>
-    
-
-
-/**
- * Reference to a field of type 'Json'
- */
-export type JsonFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Json'>
-    
-
-
-/**
- * Reference to a field of type 'QueryMode'
- */
-export type EnumQueryModeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'QueryMode'>
     
 
 
@@ -2112,6 +2319,8 @@ export type GlobalOmitConfig = {
   user?: Prisma.UserOmit
   store?: Prisma.StoreOmit
   agreementAcceptance?: Prisma.AgreementAcceptanceOmit
+  telegramConnection?: Prisma.TelegramConnectionOmit
+  importedPost?: Prisma.ImportedPostOmit
   category?: Prisma.CategoryOmit
   product?: Prisma.ProductOmit
   variant?: Prisma.VariantOmit

@@ -11,6 +11,7 @@ import { OrderStatus, PaymentStatus } from "../generated/enums.js";
 import { getParam } from "../lib/params.js";
 import { ledger } from "../lib/ledger.js";
 import { assertCanTransition } from "../lib/stateMachine.js";
+import { sendMerchantOrderAlert } from "../lib/telegram.js";
 
 export const paymentsRouter = Router();
 
@@ -144,7 +145,12 @@ paymentsRouter.get("/verify/:txRef", async (req: Request, res: Response) => {
       include: {
         order: {
           include: {
-            store: { select: { id: true, name: true, phone: true } },
+            store: {
+              include: { telegramConnection: true },
+            },
+            items: {
+              include: { variant: true },
+            },
           },
         },
       },
@@ -214,6 +220,28 @@ paymentsRouter.get("/verify/:txRef", async (req: Request, res: Response) => {
 
         return updatedOrder;
       });
+
+      // Asynchronously dispatch Telegram order alert to merchant if enabled
+      if (order.store.telegramConnection?.notifyOnOrder) {
+        const targetChatId =
+          order.store.telegramConnection.alertChatId ||
+          order.store.telegramConnection.channelId;
+        if (targetChatId) {
+          sendMerchantOrderAlert({
+            chatId: targetChatId,
+            orderToken: order.orderToken,
+            customerName: order.customerName,
+            phone: order.phone,
+            address: order.address,
+            totalCents: order.totalCents,
+            items: order.items.map((i) => ({
+              label: i.variant?.label,
+              quantity: i.quantity,
+            })),
+            paymentMethod: order.paymentMethod,
+          }).catch((err) => console.error("[Telegram Alert Error]", err));
+        }
+      }
 
       res.json({
         message: "Payment successfully verified! Funds are held safely in escrow.",

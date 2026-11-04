@@ -12,6 +12,7 @@ import {
 import { centsToETB } from "../lib/money.js";
 import { ledger } from "../lib/ledger.js";
 import { assertCanTransition, isDisputableStatus } from "../lib/stateMachine.js";
+import { sendMerchantOrderAlert } from "../lib/telegram.js";
 
 export const publicOrdersRouter = Router();
 
@@ -67,6 +68,7 @@ publicOrdersRouter.post("/", async (req: Request, res: Response) => {
     // Verify store exists and is eligible to accept orders
     const store = await prisma.store.findUnique({
       where: { id: storeId },
+      include: { telegramConnection: true },
     });
 
     if (!store) {
@@ -204,6 +206,26 @@ publicOrdersRouter.post("/", async (req: Request, res: Response) => {
       },
       { timeout: 20000, maxWait: 10000 }
     );
+
+    // If COD, notify merchant immediately via Telegram
+    if (paymentMethod === "COD" && store.telegramConnection?.notifyOnOrder) {
+      const targetChatId = store.telegramConnection.alertChatId || store.telegramConnection.channelId;
+      if (targetChatId) {
+        sendMerchantOrderAlert({
+          chatId: targetChatId,
+          orderToken: order.orderToken,
+          customerName: order.customerName,
+          phone: order.phone,
+          address: order.address,
+          totalCents: order.totalCents,
+          items: order.items.map((i) => ({
+            label: i.variant?.label,
+            quantity: i.quantity,
+          })),
+          paymentMethod: order.paymentMethod,
+        }).catch((err) => console.error("[Telegram COD Alert Error]", err));
+      }
+    }
 
     res.status(201).json({
       message:

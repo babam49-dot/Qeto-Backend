@@ -33,6 +33,16 @@ export type Store = Prisma.StoreModel
  */
 export type AgreementAcceptance = Prisma.AgreementAcceptanceModel
 /**
+ * Model TelegramConnection
+ * 
+ */
+export type TelegramConnection = Prisma.TelegramConnectionModel
+/**
+ * Model ImportedPost
+ * 
+ */
+export type ImportedPost = Prisma.ImportedPostModel
+/**
  * Model Category
  * 
  */

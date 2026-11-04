@@ -197,10 +197,10 @@ moneyRouter.get("/summary/:storeId", async (req: AuthRequest, res: Response) => 
       },
       payoutAccount: store.payoutAccount
         ? {
-            bankName: store.payoutAccount.bankName,
-            accountNumberLast4: store.payoutAccount.accountNumber.slice(-4),
-            accountName: store.payoutAccount.accountName,
-          }
+          bankName: store.payoutAccount.bankName,
+          accountNumberLast4: store.payoutAccount.accountNumber.slice(-4),
+          accountName: store.payoutAccount.accountName,
+        }
         : null,
       recentEarnings: breakdownItems,
     });

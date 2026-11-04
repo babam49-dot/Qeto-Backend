@@ -52,6 +52,8 @@ export const ModelName = {
   User: 'User',
   Store: 'Store',
   AgreementAcceptance: 'AgreementAcceptance',
+  TelegramConnection: 'TelegramConnection',
+  ImportedPost: 'ImportedPost',
   Category: 'Category',
   Product: 'Product',
   Variant: 'Variant',
@@ -123,6 +125,41 @@ export const AgreementAcceptanceScalarFieldEnum = {
 } as const
 
 export type AgreementAcceptanceScalarFieldEnum = (typeof AgreementAcceptanceScalarFieldEnum)[keyof typeof AgreementAcceptanceScalarFieldEnum]
+
+
+export const TelegramConnectionScalarFieldEnum = {
+  id: 'id',
+  storeId: 'storeId',
+  channelId: 'channelId',
+  channelUsername: 'channelUsername',
+  channelTitle: 'channelTitle',
+  autoImport: 'autoImport',
+  autoPublish: 'autoPublish',
+  notifyOnOrder: 'notifyOnOrder',
+  alertChatId: 'alertChatId',
+  connectedAt: 'connectedAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type TelegramConnectionScalarFieldEnum = (typeof TelegramConnectionScalarFieldEnum)[keyof typeof TelegramConnectionScalarFieldEnum]
+
+
+export const ImportedPostScalarFieldEnum = {
+  id: 'id',
+  storeId: 'storeId',
+  channelId: 'channelId',
+  messageId: 'messageId',
+  mediaGroupId: 'mediaGroupId',
+  rawCaption: 'rawCaption',
+  imageUrls: 'imageUrls',
+  parsedData: 'parsedData',
+  status: 'status',
+  productId: 'productId',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type ImportedPostScalarFieldEnum = (typeof ImportedPostScalarFieldEnum)[keyof typeof ImportedPostScalarFieldEnum]
 
 
 export const CategoryScalarFieldEnum = {
@@ -303,6 +340,14 @@ export const SortOrder = {
 } as const
 
 export type SortOrder = (typeof SortOrder)[keyof typeof SortOrder]
+
+
+export const NullableJsonNullValueInput = {
+  DbNull: DbNull,
+  JsonNull: JsonNull
+} as const
+
+export type NullableJsonNullValueInput = (typeof NullableJsonNullValueInput)[keyof typeof NullableJsonNullValueInput]
 
 
 export const JsonNullValueInput = {

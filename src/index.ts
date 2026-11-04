@@ -13,6 +13,8 @@ import { paymentsRouter } from "./routes/payments.js";
 import { payoutsRouter } from "./routes/payouts.js";
 import { moneyRouter } from "./routes/money.js";
 import { disputesRouter } from "./routes/disputes.js";
+import { telegramRouter } from "./routes/telegram.js";
+import { importsRouter } from "./routes/imports.js";
 import { adminRouter } from "./routes/admin.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 import { startAllJobs } from "./jobs/index.js";
@@ -46,6 +48,8 @@ app.use("/api/payments", paymentsRouter);
 app.use("/api/payouts", payoutsRouter);
 app.use("/api/money", moneyRouter);
 app.use("/api/disputes", disputesRouter);
+app.use("/api/telegram", telegramRouter);
+app.use("/api/imports", importsRouter);
 app.use("/api/admin", adminRouter);
 
 // Centralized error handling middleware
