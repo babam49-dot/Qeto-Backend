@@ -7,12 +7,12 @@ export const hashPassword = (plain: string) => bcrypt.hash(plain, 12);
 export const checkPassword = (plain: string, hash: string) =>
   bcrypt.compare(plain, hash);
 
-export function signToken(userId: string): string {
-  return jwt.sign({ sub: userId }, env.JWT_SECRET, { expiresIn: "7d" });
+export function signToken(userId: string, role: string = "MERCHANT"): string {
+  return jwt.sign({ sub: userId, role }, env.JWT_SECRET, { expiresIn: "7d" });
 }
 
-export function verifyToken(token: string): { sub: string } {
-  return jwt.verify(token, env.JWT_SECRET) as { sub: string };
+export function verifyToken(token: string): { sub: string; role?: string } {
+  return jwt.verify(token, env.JWT_SECRET) as { sub: string; role?: string };
 }
 
 // Accepts 09xxxxxxxx, 07xxxxxxxx, 9xxxxxxxx, +2519xxxxxxxx and returns +2519xxxxxxxx

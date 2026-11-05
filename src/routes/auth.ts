@@ -70,13 +70,14 @@ authRouter.post("/register", async (req: Request, res: Response) => {
         name: true,
         phone: true,
         email: true,
+        role: true,
         createdAt: true,
         // Notice: We NEVER select `password` to keep it safe!
       },
     });
 
-    // 8. Generate a JWT token using signToken() from src/lib/auth.ts
-    const token = signToken(user.id);
+    // 8. Generate a JWT token using signToken() with role
+    const token = signToken(user.id, user.role);
 
     // 9. Send back the token and user details to the client
     res.status(201).json({
@@ -146,8 +147,8 @@ authRouter.post("/login", async (req: Request, res: Response) => {
       return;
     }
 
-    // 4. Generate JWT token
-    const token = signToken(user.id);
+    // 4. Generate JWT token with user role
+    const token = signToken(user.id, user.role);
 
     // 5. Send back token and safe user details (no password)
     res.json({
@@ -158,6 +159,7 @@ authRouter.post("/login", async (req: Request, res: Response) => {
         name: user.name,
         phone: user.phone,
         email: user.email,
+        role: user.role,
         createdAt: user.createdAt,
       },
     });
@@ -182,6 +184,7 @@ authRouter.get("/me", requireAuth, async (req: AuthRequest, res: Response) => {
         name: true,
         phone: true,
         email: true,
+        role: true,
         createdAt: true,
         // Also return their stores so the dashboard knows which stores they own
         stores: {
