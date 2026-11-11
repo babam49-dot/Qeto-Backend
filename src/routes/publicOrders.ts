@@ -12,6 +12,7 @@ import { centsToETB } from "../lib/money.js";
 import { ledger } from "../lib/ledger.js";
 import { assertCanTransition, isDisputableStatus } from "../lib/stateMachine.js";
 import { sendMerchantOrderAlert } from "../lib/telegram.js";
+import { orderEvents } from "../lib/events.js";
 import {
   createOrderSchema,
   openDisputeSchema as disputeSchema,
@@ -346,6 +347,97 @@ publicOrdersRouter.get("/:orderToken", async (req: Request, res: Response) => {
 });
 
 /**
+ * GET /api/public/orders/:orderToken/live
+ * Server-Sent Events (SSE) live receipt connection for the buyer.
+ * - Streams immediate initial order state.
+ * - Pushes live updates when payment completes, merchant marks shipped, or delivery is confirmed.
+ * - Sends periodic keepalive pings to keep mobile and cellular proxies connected.
+ */
+publicOrdersRouter.get("/:orderToken/live", async (req: Request, res: Response) => {
+  try {
+    const orderToken = getParam(req.params.orderToken);
+    if (!orderToken) {
+      res.status(400).json({ error: "Order token is required" });
+      return;
+    }
+
+    const order = await prisma.order.findUnique({
+      where: { orderToken },
+      select: {
+        id: true,
+        orderToken: true,
+        status: true,
+        paymentMethod: true,
+        deliveryCodeHash: true,
+        shipDeadline: true,
+        deliveredAt: true,
+        releaseAt: true,
+        createdAt: true,
+      },
+    });
+
+    if (!order) {
+      res.status(404).json({ error: "Order not found" });
+      return;
+    }
+
+    // Set Server-Sent Events headers
+    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Cache-Control", "no-cache, no-transform");
+    res.setHeader("Connection", "keep-alive");
+    res.setHeader("X-Accel-Buffering", "no");
+    res.flushHeaders?.();
+
+    // Determine initial delivery code visibility
+    const paidStatuses: OrderStatus[] = [
+      OrderStatus.PAID_HELD,
+      OrderStatus.SHIPPED,
+      OrderStatus.DELIVERED,
+      OrderStatus.RELEASED,
+    ];
+    const isPaidOrLater = paidStatuses.includes(order.status);
+    const initialDeliveryCode = isPaidOrLater ? findDeliveryCodeFromHash(order.deliveryCodeHash) : null;
+
+    // 1. Immediately send initial state snapshot
+    res.write(
+      `data: ${JSON.stringify({
+        type: "INIT",
+        orderToken: order.orderToken,
+        status: order.status,
+        paymentMethod: order.paymentMethod,
+        deliveryCode: initialDeliveryCode,
+        shipDeadline: order.shipDeadline,
+        deliveredAt: order.deliveredAt,
+        releaseAt: order.releaseAt,
+        message: "Connected to live order status stream",
+        createdAt: order.createdAt.toISOString(),
+      })}\n\n`
+    );
+
+    // 2. Subscribe to real-time order updates
+    const unsubscribe = orderEvents.subscribeToOrder(orderToken, (payload) => {
+      res.write(`data: ${JSON.stringify({ type: "UPDATE", ...payload })}\n\n`);
+    });
+
+    // 3. Keepalive ping every 15 seconds to prevent cellular/proxy dropouts
+    const keepaliveTimer = setInterval(() => {
+      res.write(": keepalive\n\n");
+    }, 15000);
+
+    // 4. Clean up listener and timer when the client browser disconnects
+    req.on("close", () => {
+      clearInterval(keepaliveTimer);
+      unsubscribe();
+    });
+  } catch (error) {
+    console.error("SSE live stream error:", error);
+    if (!res.headersSent) {
+      res.status(500).json({ error: "Failed to establish live order stream" });
+    }
+  }
+});
+
+/**
  * POST /api/public/orders/:orderToken/confirm-received
  * Buyer taps "I received it" on their tracking page.
  * Confirms package receipt and begins the 24-hour protection window.
@@ -381,6 +473,16 @@ publicOrdersRouter.post("/:orderToken/confirm-received", async (req: Request, re
         deliveredAt: now,
         releaseAt,
       },
+    });
+
+    // Notify connected SSE listeners that delivery was confirmed
+    orderEvents.emitOrderUpdate(order.orderToken, {
+      orderToken: order.orderToken,
+      status: OrderStatus.DELIVERED,
+      deliveredAt: now,
+      releaseAt,
+      message: "Package receipt confirmed! 24-hour buyer protection window has started.",
+      updatedAt: new Date().toISOString(),
     });
 
     res.json({
@@ -476,6 +578,14 @@ publicOrdersRouter.post("/:orderToken/dispute", async (req: Request, res: Respon
       },
       { timeout: 20000, maxWait: 10000 }
     );
+
+    // Notify connected SSE listeners that dispute was opened
+    orderEvents.emitOrderUpdate(order.orderToken, {
+      orderToken: order.orderToken,
+      status: OrderStatus.DISPUTED,
+      message: "Dispute opened successfully. Escrow release is frozen pending admin review.",
+      updatedAt: new Date().toISOString(),
+    });
 
     res.status(201).json({
       message: "Dispute opened successfully. Escrow release is frozen pending review.",

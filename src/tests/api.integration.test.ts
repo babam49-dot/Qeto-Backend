@@ -173,4 +173,14 @@ describe("API Integration Tests (HTTP Endpoint & Middleware Suite)", () => {
       assert(arrayBuf.byteLength > 0);
     });
   });
+
+  describe("Real-time Server-Sent Events (SSE) Live Receipt Integration", () => {
+    it("GET /api/public/orders/:orderToken/live should return 404 for non-existent order", async () => {
+      const res = await fetch(`${baseUrl}/api/public/orders/fake_order_token_9999/live`);
+      assert.equal(res.status, 404);
+
+      const data = await res.json();
+      assert.equal(data.error, "Order not found");
+    });
+  });
 });

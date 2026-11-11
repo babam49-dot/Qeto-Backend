@@ -11,6 +11,8 @@ import { getParam } from "../lib/params.js";
 import { ledger } from "../lib/ledger.js";
 import { assertCanTransition } from "../lib/stateMachine.js";
 import { sendMerchantOrderAlert } from "../lib/telegram.js";
+import { findDeliveryCodeFromHash } from "../lib/deliveryCode.js";
+import { orderEvents } from "../lib/events.js";
 import { initializePaymentSchema } from "../schemas/index.js";
 
 export const paymentsRouter = Router();
@@ -215,6 +217,17 @@ paymentsRouter.get("/verify/:txRef", async (req: Request, res: Response) => {
         return updatedOrder;
       });
 
+      // Emit live SSE update to the buyer's receipt/tracking screen
+      const activeDeliveryCode = findDeliveryCodeFromHash(order.deliveryCodeHash);
+      orderEvents.emitOrderUpdate(order.orderToken, {
+        orderToken: order.orderToken,
+        status: OrderStatus.PAID_HELD,
+        paymentStatus: PaymentStatus.SUCCESS,
+        deliveryCode: activeDeliveryCode,
+        message: "Payment verified! Your funds are securely held in escrow.",
+        updatedAt: new Date().toISOString(),
+      });
+
       // Asynchronously dispatch Telegram order alert to merchant if enabled
       if (order.store.telegramConnection?.notifyOnOrder) {
         const targetChatId =
@@ -378,6 +391,17 @@ paymentsRouter.post("/webhook", async (req: Request, res: Response) => {
             data: { processedAt: new Date() },
           });
         });
+
+        // Emit live SSE update to the buyer's tracking screen
+        const activeDeliveryCode = findDeliveryCodeFromHash(order.deliveryCodeHash);
+        orderEvents.emitOrderUpdate(order.orderToken, {
+          orderToken: order.orderToken,
+          status: OrderStatus.PAID_HELD,
+          paymentStatus: PaymentStatus.SUCCESS,
+          deliveryCode: activeDeliveryCode,
+          message: "Payment verified via webhook! Funds held in escrow.",
+          updatedAt: new Date().toISOString(),
+        });
       }
     }
 
@@ -458,6 +482,17 @@ paymentsRouter.post("/simulate-success", async (req: Request, res: Response) => 
       );
 
       return ord;
+    });
+
+    // Emit live SSE update to the buyer's tracking screen
+    const activeDeliveryCode = findDeliveryCodeFromHash(order.deliveryCodeHash);
+    orderEvents.emitOrderUpdate(order.orderToken, {
+      orderToken: order.orderToken,
+      status: OrderStatus.PAID_HELD,
+      paymentStatus: PaymentStatus.SUCCESS,
+      deliveryCode: activeDeliveryCode,
+      message: "Sandbox payment verified! Funds held safely in escrow.",
+      updatedAt: new Date().toISOString(),
     });
 
     res.json({

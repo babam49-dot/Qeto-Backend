@@ -9,6 +9,7 @@ import { ledger } from "../lib/ledger.js";
 import { assertCanTransition } from "../lib/stateMachine.js";
 import { publicOrdersRouter } from "./publicOrders.js";
 import { deliveryCodeSchema } from "../schemas/index.js";
+import { orderEvents } from "../lib/events.js";
 
 export const ordersRouter = Router();
 
@@ -229,6 +230,14 @@ ordersRouter.patch("/:id/ship", requireAuth, async (req: AuthRequest, res: Respo
       },
     });
 
+    // Notify connected buyer SSE receipt in real time
+    orderEvents.emitOrderUpdate(order.orderToken, {
+      orderToken: order.orderToken,
+      status: OrderStatus.SHIPPED,
+      message: "Your package has been dispatched! The merchant marked your order as SHIPPED.",
+      updatedAt: new Date().toISOString(),
+    });
+
     res.json({
       message: "Order marked as SHIPPED successfully",
       order: {
@@ -321,6 +330,16 @@ ordersRouter.post("/:id/confirm-delivery", requireAuth, async (req: AuthRequest,
         releaseAt,
         codeAttempts: 0,
       },
+    });
+
+    // Notify connected buyer SSE receipt in real time
+    orderEvents.emitOrderUpdate(order.orderToken, {
+      orderToken: order.orderToken,
+      status: OrderStatus.DELIVERED,
+      deliveredAt: now,
+      releaseAt,
+      message: "Delivery handshake verified with your 4-digit code! 24-hour buyer protection active.",
+      updatedAt: new Date().toISOString(),
     });
 
     res.json({
