@@ -5,7 +5,11 @@
   "main": "index.js",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "test": "tsx --test src/tests/**/*.test.ts"
+    "test": "tsx --test src/tests/**/*.test.ts",
+    "seed": "tsx prisma/seed.ts"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
   },
   "keywords": [],
   "author": "",

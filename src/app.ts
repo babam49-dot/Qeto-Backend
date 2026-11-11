@@ -1,4 +1,5 @@
 import "dotenv/config";
+import path from "node:path";
 import express from "express";
 import cors from "cors";
 import { prisma } from "./db.js";
@@ -16,12 +17,14 @@ import { disputesRouter } from "./routes/disputes.js";
 import { telegramRouter } from "./routes/telegram.js";
 import { importsRouter } from "./routes/imports.js";
 import { adminRouter } from "./routes/admin.js";
+import { uploadRouter } from "./routes/upload.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 
 export const app = express();
 
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: "10mb" }));
+app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 
 app.get("/", (_req, res) => {
   res.json({ message: "Welcome to Qeto API", docs: "/health" });
@@ -51,6 +54,7 @@ app.use("/api/disputes", disputesRouter);
 app.use("/api/telegram", telegramRouter);
 app.use("/api/imports", importsRouter);
 app.use("/api/admin", adminRouter);
+app.use("/api/upload", uploadRouter);
 
 // Centralized error handling middleware
 app.use(errorHandler);

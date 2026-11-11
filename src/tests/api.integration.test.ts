@@ -2,6 +2,7 @@ import { describe, it, before, after } from "node:test";
 import assert from "node:assert/strict";
 import http from "node:http";
 import { app } from "../app.js";
+import { signToken } from "../lib/auth.js";
 
 describe("API Integration Tests (HTTP Endpoint & Middleware Suite)", () => {
   let server: http.Server;
@@ -131,6 +132,45 @@ describe("API Integration Tests (HTTP Endpoint & Middleware Suite)", () => {
       assert.equal(res.status, 404);
       const data = await res.json();
       assert.equal(data.error, "Order not found");
+    });
+  });
+
+  describe("File Upload & Static Serving Integration", () => {
+    it("POST /api/upload should return 401 without Bearer token", async () => {
+      const res = await fetch(`${baseUrl}/api/upload`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ image: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==" }),
+      });
+
+      assert.equal(res.status, 401);
+    });
+
+    it("POST /api/upload should successfully save image and serve statically", async () => {
+      const testToken = signToken("test_merchant_user_id");
+      // 1x1 transparent PNG data URI
+      const base64Png = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
+
+      const uploadRes = await fetch(`${baseUrl}/api/upload`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${testToken}`,
+        },
+        body: JSON.stringify({ image: base64Png }),
+      });
+
+      assert.equal(uploadRes.status, 201);
+      const uploadData = await uploadRes.json();
+      assert.equal(uploadData.message, "Image uploaded successfully");
+      assert(uploadData.url.startsWith("/uploads/"));
+      assert(uploadData.filename.endsWith(".png"));
+
+      // Verify that the static file can be downloaded via GET /uploads/...
+      const staticRes = await fetch(`${baseUrl}${uploadData.url}`);
+      assert.equal(staticRes.status, 200);
+      const arrayBuf = await staticRes.arrayBuffer();
+      assert(arrayBuf.byteLength > 0);
     });
   });
 });
