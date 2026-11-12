@@ -228,6 +228,18 @@ paymentsRouter.get("/verify/:txRef", async (req: Request, res: Response) => {
         updatedAt: new Date().toISOString(),
       });
 
+      // Emit live SSE update to the merchant's admin dashboard
+      orderEvents.emitStoreOrderUpdate(order.storeId, {
+        orderId: order.id,
+        orderToken: order.orderToken,
+        status: OrderStatus.PAID_HELD,
+        customerName: order.customerName,
+        phone: order.phone,
+        totalCents: order.totalCents,
+        message: `New paid order from ${order.customerName}! Funds held in escrow.`,
+        updatedAt: new Date().toISOString(),
+      });
+
       // Asynchronously dispatch Telegram order alert to merchant if enabled
       if (order.store.telegramConnection?.notifyOnOrder) {
         const targetChatId =
@@ -402,6 +414,18 @@ paymentsRouter.post("/webhook", async (req: Request, res: Response) => {
           message: "Payment verified via webhook! Funds held in escrow.",
           updatedAt: new Date().toISOString(),
         });
+
+        // Emit live SSE update to the merchant's admin dashboard
+        orderEvents.emitStoreOrderUpdate(order.storeId, {
+          orderId: order.id,
+          orderToken: order.orderToken,
+          status: OrderStatus.PAID_HELD,
+          customerName: order.customerName,
+          phone: order.phone,
+          totalCents: order.totalCents,
+          message: `Webhook: New paid order from ${order.customerName}!`,
+          updatedAt: new Date().toISOString(),
+        });
       }
     }
 
@@ -492,6 +516,18 @@ paymentsRouter.post("/simulate-success", async (req: Request, res: Response) => 
       paymentStatus: PaymentStatus.SUCCESS,
       deliveryCode: activeDeliveryCode,
       message: "Sandbox payment verified! Funds held safely in escrow.",
+      updatedAt: new Date().toISOString(),
+    });
+
+    // Emit live SSE update to the merchant's admin dashboard
+    orderEvents.emitStoreOrderUpdate(order.storeId, {
+      orderId: order.id,
+      orderToken: order.orderToken,
+      status: OrderStatus.PAID_HELD,
+      customerName: order.customerName,
+      phone: order.phone,
+      totalCents: order.totalCents,
+      message: `Sandbox: New paid order from ${order.customerName}!`,
       updatedAt: new Date().toISOString(),
     });
 

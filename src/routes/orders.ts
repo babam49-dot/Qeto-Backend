@@ -118,6 +118,74 @@ ordersRouter.get("/store/:storeId", requireAuth, async (req: AuthRequest, res: R
 });
 
 /**
+ * GET /api/orders/store/:storeId/live
+ * Server-Sent Events (SSE) live updates stream for the Merchant Admin Dashboard.
+ * - Authenticated merchant only (must own store or be SUPER_ADMIN).
+ * - Pushes live events when new orders arrive, payments complete, or disputes are opened.
+ */
+ordersRouter.get("/store/:storeId/live", requireAuth, async (req: AuthRequest, res: Response) => {
+  try {
+    const storeId = getParam(req.params.storeId);
+    if (!storeId) {
+      res.status(400).json({ error: "Store ID is required" });
+      return;
+    }
+
+    const store = await prisma.store.findUnique({
+      where: { id: storeId },
+    });
+
+    if (!store) {
+      res.status(404).json({ error: "Store not found" });
+      return;
+    }
+
+    if (store.ownerId !== req.userId && req.userRole !== "SUPER_ADMIN") {
+      res.status(403).json({ error: "Forbidden: You do not own this store" });
+      return;
+    }
+
+    // Set Server-Sent Events headers
+    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Cache-Control", "no-cache, no-transform");
+    res.setHeader("Connection", "keep-alive");
+    res.setHeader("X-Accel-Buffering", "no");
+    res.flushHeaders?.();
+
+    // 1. Send initial connected notification
+    res.write(
+      `data: ${JSON.stringify({
+        type: "INIT",
+        storeId,
+        message: "Connected to merchant store live order stream",
+        timestamp: new Date().toISOString(),
+      })}\n\n`
+    );
+
+    // 2. Subscribe to real-time store updates
+    const unsubscribe = orderEvents.subscribeToStore(storeId, (payload) => {
+      res.write(`data: ${JSON.stringify({ type: "ORDER_UPDATE", ...payload })}\n\n`);
+    });
+
+    // 3. Keepalive ping every 15 seconds to prevent browser/proxy dropouts
+    const keepaliveTimer = setInterval(() => {
+      res.write(": keepalive\n\n");
+    }, 15000);
+
+    // 4. Clean up listener and timer when the client browser disconnects
+    req.on("close", () => {
+      clearInterval(keepaliveTimer);
+      unsubscribe();
+    });
+  } catch (error) {
+    console.error("Merchant SSE live stream error:", error);
+    if (!res.headersSent) {
+      res.status(500).json({ error: "Failed to establish store live stream" });
+    }
+  }
+});
+
+/**
  * GET /api/orders/:id
  * Merchant views complete order details for an order in their store.
  */
@@ -238,6 +306,18 @@ ordersRouter.patch("/:id/ship", requireAuth, async (req: AuthRequest, res: Respo
       updatedAt: new Date().toISOString(),
     });
 
+    // Notify connected merchant store SSE in real time
+    orderEvents.emitStoreOrderUpdate(order.storeId, {
+      orderId: order.id,
+      orderToken: order.orderToken,
+      status: OrderStatus.SHIPPED,
+      customerName: order.customerName,
+      phone: order.phone,
+      totalCents: order.totalCents,
+      message: `Order marked as SHIPPED.`,
+      updatedAt: new Date().toISOString(),
+    });
+
     res.json({
       message: "Order marked as SHIPPED successfully",
       order: {
@@ -339,6 +419,18 @@ ordersRouter.post("/:id/confirm-delivery", requireAuth, async (req: AuthRequest,
       deliveredAt: now,
       releaseAt,
       message: "Delivery handshake verified with your 4-digit code! 24-hour buyer protection active.",
+      updatedAt: new Date().toISOString(),
+    });
+
+    // Notify connected merchant store SSE in real time
+    orderEvents.emitStoreOrderUpdate(order.storeId, {
+      orderId: order.id,
+      orderToken: order.orderToken,
+      status: OrderStatus.DELIVERED,
+      customerName: order.customerName,
+      phone: order.phone,
+      totalCents: order.totalCents,
+      message: `Delivery confirmed! 24-hour buyer protection active before funds release.`,
       updatedAt: new Date().toISOString(),
     });
 

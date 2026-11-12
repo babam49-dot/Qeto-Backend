@@ -485,6 +485,18 @@ publicOrdersRouter.post("/:orderToken/confirm-received", async (req: Request, re
       updatedAt: new Date().toISOString(),
     });
 
+    // Notify connected merchant store SSE in real time
+    orderEvents.emitStoreOrderUpdate(order.storeId, {
+      orderId: order.id,
+      orderToken: order.orderToken,
+      status: OrderStatus.DELIVERED,
+      customerName: order.customerName,
+      phone: order.phone,
+      totalCents: order.totalCents,
+      message: `Buyer confirmed receipt! 24-hour protection window active.`,
+      updatedAt: new Date().toISOString(),
+    });
+
     res.json({
       message: "Package receipt confirmed! 24-hour buyer protection window has started.",
       order: {
@@ -584,6 +596,18 @@ publicOrdersRouter.post("/:orderToken/dispute", async (req: Request, res: Respon
       orderToken: order.orderToken,
       status: OrderStatus.DISPUTED,
       message: "Dispute opened successfully. Escrow release is frozen pending admin review.",
+      updatedAt: new Date().toISOString(),
+    });
+
+    // Notify connected merchant store SSE in real time
+    orderEvents.emitStoreOrderUpdate(order.storeId, {
+      orderId: order.id,
+      orderToken: order.orderToken,
+      status: OrderStatus.DISPUTED,
+      customerName: order.customerName,
+      phone: order.phone,
+      totalCents: order.totalCents,
+      message: `Buyer opened a dispute. Escrow release is frozen pending review.`,
       updatedAt: new Date().toISOString(),
     });
 
